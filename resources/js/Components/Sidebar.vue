@@ -1,0 +1,285 @@
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { Link, usePage } from "@inertiajs/vue3";
+import ApplicationLogo from "@/Components/ApplicationLogo.vue";
+
+const page = usePage();
+const user = computed(() => {
+    try {
+        return page.props.auth?.user || null;
+    } catch (e) {
+        console.error("Error accessing auth user:", e);
+        return null;
+    }
+});
+
+onMounted(() => {
+    console.log("Sidebar mounted - client side hydration");
+    console.log("Current route:", route().current());
+    console.log("User auth state:", !!user.value);
+});
+
+const isClient = typeof window !== "undefined";
+
+if (!isClient) {
+    console.log("Sidebar executing in SSR mode");
+    try {
+        console.log("Current route (SSR):", route?.()?.current());
+        console.log("User auth state (SSR):", !!user?.value);
+    } catch (e) {
+        console.error("SSR context error:", e);
+    }
+}
+
+const props = defineProps({
+    isOpen: {
+        type: Boolean,
+        default: true,
+    },
+    isMobile: {
+        type: Boolean,
+        default: false,
+    },
+});
+
+const emit = defineEmits(["toggle", "close"]);
+
+const navigationItems = computed(() => {
+    if (!route) {
+        console.error("Route helper not available");
+        return [];
+    }
+
+    const baseItems = [
+        {
+            name: "Dashboard",
+            href: route?.("dashboard") || "#",
+            icon: "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z",
+            active: route().current("dashboard"),
+        },
+        {
+            name: "Tasks",
+            href: route("tasks.index"),
+            icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2",
+            active: route().current("tasks.*"),
+        },
+        {
+            name: "Sales",
+            href: route("sales.index"),
+            icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
+            active: route().current("sales.*"),
+        },
+        {
+            name: "Content Posts",
+            href: route("content.index"),
+            icon: "M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z",
+            active: route().current("content.*"),
+        },
+        {
+            name: "Expenses",
+            href: route("expenses.index"),
+            icon: "M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z",
+            active: route().current("expenses.*"),
+        },
+        {
+            name: "Goals",
+            href: route("goals.index"),
+            icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
+            active: route().current("goals.*"),
+        },
+    ];
+
+    const roleBasedItems = [];
+
+    // Add role-specific dashboard links
+    if (user.value.role === "admin") {
+        roleBasedItems.push({
+            name: "Admin Dashboard",
+            href: route("admin.dashboard"),
+            icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z",
+            active: route().current("admin.dashboard"),
+        });
+    }
+
+    if (user.value.role === "manager" || user.value.role === "admin") {
+        roleBasedItems.push({
+            name: "Manager Dashboard",
+            href: route("manager.dashboard"),
+            icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
+            active: route().current("manager.dashboard"),
+        });
+    }
+
+    if (user.value.role === "va") {
+        roleBasedItems.push({
+            name: "VA Dashboard",
+            href: route("va.dashboard"),
+            icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z",
+            active: route().current("va.dashboard"),
+        });
+    }
+
+    return [...roleBasedItems, ...baseItems];
+});
+
+const bottomNavigationItems = [
+    {
+        name: "Profile",
+        href: route?.("profile.edit") || "#",
+        icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
+        active: route().current("profile.edit"),
+    },
+];
+
+const toggleSidebar = () => {
+    emit("toggle");
+};
+
+const closeSidebar = () => {
+    if (props.isMobile) {
+        emit("close");
+    }
+};
+</script>
+
+<template>
+    <aside
+        v-show="isClient"
+        :class="[
+            'fixed inset-y-0 left-0 z-50 flex flex-col bg-gray-900 text-white transition-all duration-300 ease-in-out',
+            isOpen ? 'w-64' : 'w-20',
+            isMobile ? 'translate-x-0' : 'translate-x-0',
+            !isOpen && !isMobile
+                ? '-translate-x-full lg:translate-x-0 lg:w-20'
+                : '',
+        ]"
+    >
+        <!-- Logo Section -->
+        <div class="flex h-16 items-center justify-between px-4">
+            <Link
+                :href="route('dashboard')"
+                class="flex items-center space-x-3"
+                @click="closeSidebar"
+            >
+                <ApplicationLogo v-show="isClient" class="h-8 w-auto" />
+                <span v-if="isOpen" class="text-lg font-bold text-white">
+                    Hidden Treasures
+                </span>
+            </Link>
+            <button
+                v-if="!isMobile"
+                @click="toggleSidebar"
+                class="rounded-md p-1 text-gray-400 hover:bg-gray-800 hover:text-white"
+            >
+                <svg
+                    class="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        v-if="isOpen"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                    />
+                    <path
+                        v-else
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                    />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Navigation Items -->
+        <nav class="flex-1 space-y-1 px-2 py-4">
+            <div v-for="item in navigationItems" :key="item.name" class="group">
+                <Link
+                    :href="item.href"
+                    :class="[
+                        'flex items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200',
+                        item.active
+                            ? 'bg-gray-800 text-white'
+                            : 'text-gray-300 hover:bg-gray-800 hover:text-white',
+                        !isOpen && 'justify-center',
+                    ]"
+                    @click="closeSidebar"
+                >
+                    <svg
+                        class="h-5 w-5 shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            :d="item.icon"
+                        />
+                    </svg>
+                    <span v-if="isOpen" class="truncate">
+                        {{ item.name }}
+                    </span>
+                </Link>
+            </div>
+        </nav>
+
+        <!-- User Profile Section -->
+        <div class="border-t border-gray-800 p-4">
+            <div class="flex items-center space-x-3">
+                <div
+                    class="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center"
+                >
+                    <span class="text-sm font-medium text-white">
+                        {{ user?.name?.charAt(0) || "U" }}
+                    </span>
+                </div>
+                <div v-if="isOpen" class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-white truncate">
+                        {{ user?.name || "User" }}
+                    </p>
+                    <p class="text-xs text-gray-400 truncate">
+                        {{ user?.email || "user@example.com" }}
+                    </p>
+                </div>
+            </div>
+            <div class="mt-4 space-y-1">
+                <Link
+                    v-for="item in bottomNavigationItems"
+                    :key="item.name"
+                    :href="item.href"
+                    :class="[
+                        'flex items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200',
+                        item.active
+                            ? 'bg-gray-800 text-white'
+                            : 'text-gray-300 hover:bg-gray-800 hover:text-white',
+                        !isOpen && 'justify-center',
+                    ]"
+                    @click="closeSidebar"
+                >
+                    <svg
+                        class="h-5 w-5 shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            :d="item.icon"
+                        />
+                    </svg>
+                    <span v-if="isOpen" class="truncate">
+                        {{ item.name }}
+                    </span>
+                </Link>
+            </div>
+        </div>
+    </aside>
+</template>
