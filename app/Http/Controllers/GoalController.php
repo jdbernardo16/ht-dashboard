@@ -6,6 +6,7 @@ use App\Models\Goal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 
 class GoalController extends Controller
 {
@@ -23,7 +24,7 @@ class GoalController extends Controller
             $search = $request->get('search');
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
@@ -31,32 +32,29 @@ class GoalController extends Controller
             $query->where('status', $request->get('status'));
         }
 
-        if ($request->has('type')) {
-            $query->where('type', $request->get('type'));
-        }
-
-        if ($request->has('priority')) {
-            $query->where('priority', $request->get('priority'));
-        }
-
-        if ($request->has('date_from')) {
-            $query->whereDate('target_date', '>=', $request->get('date_from'));
-        }
-
-        if ($request->has('date_to')) {
-            $query->whereDate('target_date', '<=', $request->get('date_to'));
-        }
-
         // Role-based filtering
-        if (Auth::user()->hasRole('virtual_assistant')) {
+        if (Auth::user()->hasRole('va')) {
             $query->where('user_id', Auth::id());
         }
 
-        $goals = $query->orderBy('priority', 'desc')
-                      ->orderBy('target_date', 'asc')
-                      ->paginate($request->get('per_page', 15));
+        $goals = $query->orderBy('created_at', 'desc')
+            ->paginate($request->get('per_page', 15))
+            ->withQueryString();
 
-        return response()->json($goals);
+        return Inertia::render('Goals/Index', [
+            'goals' => $goals,
+            'filters' => $request->only(['search', 'status'])
+        ]);
+    }
+
+    /**
+     * Show the form for creating a new goal.
+     */
+    public function create()
+    {
+        Gate::authorize('create', Goal::class);
+
+        return Inertia::render('Goals/Create');
     }
 
     /**
@@ -68,29 +66,20 @@ class GoalController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'type' => 'required|in:sales,revenue,expense,task,content,other',
-            'target_value' => 'required|numeric|min:0',
-            'current_value' => 'nullable|numeric|min:0',
-            'target_date' => 'required|date',
-            'priority' => 'required|in:low,medium,high,urgent',
-            'status' => 'required|in:not_started,in_progress,completed,failed',
-            'category' => 'nullable|string|max:100',
+            'description' => 'required|string',
+            'target_amount' => 'required|numeric|min:0',
+            'target_date' => 'required|date|after:today',
+            'status' => 'required|in:draft,published,archived',
+            'category' => 'required|string|max:255',
             'notes' => 'nullable|string',
-            'is_recurring' => 'boolean',
-            'recurring_frequency' => 'nullable|in:daily,weekly,monthly,yearly|required_if:is_recurring,true',
-            'parent_goal_id' => 'nullable|exists:goals,id',
         ]);
 
         $validated['user_id'] = Auth::id();
-        $validated['progress'] = $validated['current_value'] ?? 0;
 
         $goal = Goal::create($validated);
 
-        return response()->json([
-            'message' => 'Goal created successfully',
-            'data' => $goal->load(['user'])
-        ], 201);
+        return redirect()->route('goals.index')
+            ->with('success', 'Goal created successfully');
     }
 
     /**
@@ -100,7 +89,21 @@ class GoalController extends Controller
     {
         Gate::authorize('view', $goal);
 
-        return response()->json($goal->load(['user']));
+        return Inertia::render('Goals/Show', [
+            'goal' => $goal->load(['user'])
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified goal.
+     */
+    public function edit(Goal $goal)
+    {
+        Gate::authorize('update', $goal);
+
+        return Inertia::render('Goals/Edit', [
+            'goal' => $goal->load(['user'])
+        ]);
     }
 
     /**
@@ -112,30 +115,18 @@ class GoalController extends Controller
 
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
-            'type' => 'sometimes|required|in:sales,revenue,expense,task,content,other',
-            'target_value' => 'sometimes|required|numeric|min:0',
-            'current_value' => 'nullable|numeric|min:0',
-            'target_date' => 'sometimes|required|date',
-            'priority' => 'sometimes|required|in:low,medium,high,urgent',
-            'status' => 'sometimes|required|in:not_started,in_progress,completed,failed',
-            'category' => 'nullable|string|max:100',
+            'description' => 'sometimes|required|string',
+            'target_amount' => 'sometimes|required|numeric|min:0',
+            'target_date' => 'sometimes|required|date|after:today',
+            'status' => 'sometimes|required|in:draft,published,archived',
+            'category' => 'sometimes|required|string|max:255',
             'notes' => 'nullable|string',
-            'is_recurring' => 'boolean',
-            'recurring_frequency' => 'nullable|in:daily,weekly,monthly,yearly|required_if:is_recurring,true',
-            'parent_goal_id' => 'nullable|exists:goals,id',
         ]);
-
-        if (isset($validated['current_value'])) {
-            $validated['progress'] = $validated['current_value'];
-        }
 
         $goal->update($validated);
 
-        return response()->json([
-            'message' => 'Goal updated successfully',
-            'data' => $goal->load(['user'])
-        ]);
+        return redirect()->route('goals.index')
+            ->with('success', 'Goal updated successfully');
     }
 
     /**
@@ -147,37 +138,12 @@ class GoalController extends Controller
 
         $goal->delete();
 
-        return response()->json([
-            'message' => 'Goal deleted successfully'
-        ], 204);
+        return redirect()->route('goals.index')
+            ->with('success', 'Goal deleted successfully');
     }
 
     /**
-     * Update goal progress
-     */
-    public function updateProgress(Request $request, Goal $goal)
-    {
-        Gate::authorize('update', $goal);
-
-        $validated = $request->validate([
-            'current_value' => 'required|numeric|min:0',
-            'notes' => 'nullable|string',
-        ]);
-
-        $goal->update([
-            'current_value' => $validated['current_value'],
-            'progress' => $validated['current_value'],
-            'status' => $validated['current_value'] >= $goal->target_value ? 'completed' : 'in_progress'
-        ]);
-
-        return response()->json([
-            'message' => 'Goal progress updated successfully',
-            'data' => $goal->load(['user'])
-        ]);
-    }
-
-    /**
-     * Get goal statistics
+     * Get goals statistics
      */
     public function statistics(Request $request)
     {
@@ -186,28 +152,32 @@ class GoalController extends Controller
         $query = Goal::query();
 
         // Role-based filtering
-        if (Auth::user()->hasRole('virtual_assistant')) {
+        if (Auth::user()->hasRole('va')) {
             $query->where('user_id', Auth::id());
         }
 
         $totalGoals = $query->count();
-        $completedGoals = $query->clone()->where('status', 'completed')->count();
-        $inProgressGoals = $query->clone()->where('status', 'in_progress')->count();
-        $failedGoals = $query->clone()->where('status', 'failed')->count();
+        $publishedGoals = $query->clone()->where('status', 'published')->count();
+        $draftGoals = $query->clone()->where('status', 'draft')->count();
+        $archivedGoals = $query->clone()->where('status', 'archived')->count();
 
-        $goalsByType = $query->selectRaw('type, COUNT(*) as count')
-                           ->groupBy('type')
-                           ->pluck('count', 'type');
+        $monthlyGoals = $query->clone()
+            ->selectRaw('COUNT(*) as total, MONTH(created_at) as month')
+            ->whereYear('created_at', date('Y'))
+            ->groupBy('month')
+            ->pluck('total', 'month')
+            ->mapWithKeys(function ($value, $key) {
+                return [\Carbon\Carbon::create()->month($key)->format('F') => $value];
+            });
 
-        $averageProgress = $query->avg('progress') ?? 0;
-
-        return response()->json([
-            'total_goals' => $totalGoals,
-            'completed_goals' => $completedGoals,
-            'in_progress_goals' => $inProgressGoals,
-            'failed_goals' => $failedGoals,
-            'goals_by_type' => $goalsByType,
-            'average_progress' => $averageProgress
+        return Inertia::render('Goals/Statistics', [
+            'statistics' => [
+                'total_goals' => $totalGoals,
+                'published_goals' => $publishedGoals,
+                'draft_goals' => $draftGoals,
+                'archived_goals' => $archivedGoals,
+                'monthly_goals' => $monthlyGoals
+            ]
         ]);
     }
 }

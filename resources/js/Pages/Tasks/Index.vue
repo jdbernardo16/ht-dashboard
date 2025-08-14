@@ -100,21 +100,38 @@ import DataTable from "@/Components/DataTable.vue";
 import FormModal from "@/Components/FormModal.vue";
 import SearchFilter from "@/Components/SearchFilter.vue";
 
+// Props from controller
+const props = defineProps({
+    tasks: {
+        type: Object,
+        required: true,
+    },
+    users: {
+        type: Array,
+        default: () => [],
+    },
+    goals: {
+        type: Array,
+        default: () => [],
+    },
+    filters: {
+        type: Object,
+        default: () => ({}),
+    },
+});
+
 // Reactive data
-const tasks = ref([]);
-const users = ref([]);
-const goals = ref([]);
 const loading = ref(false);
 const showModal = ref(false);
 const isEdit = ref(false);
 const form = ref({});
 const filters = ref({
-    search: "",
-    status: "",
-    priority: "",
-    assigned_to: "",
-    date_from: "",
-    date_to: "",
+    search: props.filters.search || "",
+    status: props.filters.status || "",
+    priority: props.filters.priority || "",
+    assigned_to: props.filters.assigned_to || "",
+    date_from: props.filters.date_from || "",
+    date_to: props.filters.date_to || "",
 });
 
 // Table columns
@@ -246,9 +263,8 @@ const fetchTasks = async () => {
 
         router.get("/tasks", params, {
             preserveState: true,
-            onSuccess: (page) => {
-                tasks.value = page.props.tasks.data;
-            },
+            preserveScroll: true,
+            only: ["tasks", "filters"],
             onError: (errors) => {
                 console.error("Error fetching tasks:", errors);
             },
@@ -260,61 +276,36 @@ const fetchTasks = async () => {
     }
 };
 
-const fetchUsers = async () => {
-    try {
-        router.get(
-            "/users",
-            {},
-            {
-                preserveState: true,
-                onSuccess: (page) => {
-                    users.value = page.props.users || [];
-                },
-            }
-        );
-        // Update form fields with users
-        const assignedToField = formFields.find(
-            (f) => f.name === "assigned_to"
-        );
-        if (assignedToField) {
-            assignedToField.options = users.value.map((user) => ({
-                value: user.id,
-                label: user.name,
-            }));
-        }
+// Use props data instead of fetching
+const users = computed(() => props.users);
+const goals = computed(() => props.goals);
+const tasks = computed(() => props.tasks.data || []);
 
-        // Update user options for filters
-        userOptions.value = users.value.map((user) => ({
-            value: user.id,
-            label: user.name,
-        }));
-    } catch (error) {
-        console.error("Error fetching users:", error);
+// Update form fields with props data
+const userOptions = computed(() =>
+    users.value.map((user) => ({
+        value: user.id,
+        label: user.name,
+    }))
+);
+
+const goalOptions = computed(() =>
+    goals.value.map((goal) => ({
+        value: goal.id,
+        label: goal.title,
+    }))
+);
+
+// Update form fields dynamically
+const updateFormFields = () => {
+    const assignedToField = formFields.find((f) => f.name === "assigned_to");
+    if (assignedToField) {
+        assignedToField.options = userOptions.value;
     }
-};
 
-const fetchGoals = async () => {
-    try {
-        router.get(
-            "/goals",
-            {},
-            {
-                preserveState: true,
-                onSuccess: (page) => {
-                    goals.value = page.props.goals || [];
-                },
-            }
-        );
-        // Update form fields with goals
-        const goalField = formFields.find((f) => f.name === "related_goal_id");
-        if (goalField) {
-            goalField.options = goals.value.map((goal) => ({
-                value: goal.id,
-                label: goal.title,
-            }));
-        }
-    } catch (error) {
-        console.error("Error fetching goals:", error);
+    const goalField = formFields.find((f) => f.name === "related_goal_id");
+    if (goalField) {
+        goalField.options = goalOptions.value;
     }
 };
 
@@ -342,13 +333,7 @@ const createTask = () => {
 };
 
 const editTask = (task) => {
-    isEdit.value = true;
-    form.value = {
-        ...task,
-        tags: Array.isArray(task.tags) ? task.tags.join(", ") : task.tags || "",
-        due_date: task.due_date,
-    };
-    showModal.value = true;
+    router.visit(`/tasks/${task.id}/edit`);
 };
 
 const viewTask = (task) => {
@@ -375,6 +360,11 @@ const handleSubmit = async (formData) => {
                 .split(",")
                 .map((tag) => tag.trim())
                 .filter((tag) => tag);
+        }
+
+        // Convert checkbox values to proper boolean type
+        if (formData.is_recurring !== undefined) {
+            formData.is_recurring = Boolean(formData.is_recurring);
         }
 
         if (isEdit.value) {
@@ -469,8 +459,11 @@ const getDueDateClass = (dueDate, status) => {
 
 // Lifecycle
 onMounted(() => {
-    fetchTasks();
-    fetchUsers();
-    fetchGoals();
+    updateFormFields();
 });
+
+// Watch for changes in props
+import { watch } from "vue";
+watch(() => props.users, updateFormFields, { immediate: true });
+watch(() => props.goals, updateFormFields, { immediate: true });
 </script>

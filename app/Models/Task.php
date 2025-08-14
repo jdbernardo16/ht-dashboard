@@ -14,9 +14,19 @@ class Task extends Model
         'description',
         'status',
         'priority',
+        'user_id',
         'assigned_to',
         'due_date',
         'completed_at',
+        'category',
+        'estimated_hours',
+        'actual_hours',
+        'tags',
+        'notes',
+        'parent_task_id',
+        'related_goal_id',
+        'is_recurring',
+        'recurring_frequency',
     ];
 
     protected $casts = [
@@ -27,5 +37,15 @@ class Task extends Model
     public function assignedUser()
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function assignedTo()
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

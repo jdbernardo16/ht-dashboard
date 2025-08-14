@@ -11,6 +11,7 @@ class Sale extends Model
 
     protected $fillable = [
         'user_id',
+        'client_id',
         'type',
         'amount',
         'date',
@@ -25,5 +26,10 @@ class Sale extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function client()
+    {
+        return $this->belongsTo(User::class, 'client_id');
     }
 }

@@ -45,5 +45,10 @@ class DatabaseSeeder extends Seeder
 
         // Create additional test users
         User::factory(5)->create();
+
+        // Create sample clients for sales functionality
+        $this->call([
+            ClientSeeder::class,
+        ]);
     }
 }

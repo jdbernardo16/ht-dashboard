@@ -87,11 +87,11 @@
                                         }}
                                     </option>
                                     <option
-                                        v-for="option in field.options"
-                                        :key="option.value"
-                                        :value="option.value"
+                                        v-for="option in field.options || []"
+                                        :key="option?.value || option"
+                                        :value="option?.value || option"
                                     >
-                                        {{ option.label }}
+                                        {{ option?.label || option }}
                                     </option>
                                 </select>
 

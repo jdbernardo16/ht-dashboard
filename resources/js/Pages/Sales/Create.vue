@@ -30,7 +30,8 @@
                                         :key="client.id"
                                         :value="client.id"
                                     >
-                                        {{ client.name }}
+                                        {{ client.first_name }}
+                                        {{ client.last_name }}
                                     </option>
                                 </select>
                                 <p
@@ -231,16 +232,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import { router } from "@inertiajs/vue3";
+import { ref } from "vue";
+import { router, useForm } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import axios from "axios";
 
-const clients = ref([]);
+const props = defineProps({
+    clients: {
+        type: Array,
+        required: true,
+    },
+});
+
 const loading = ref(false);
 const errors = ref({});
 
-const form = ref({
+const form = useForm({
     client_id: "",
     product_name: "",
     description: "",
@@ -251,38 +257,24 @@ const form = ref({
     notes: "",
 });
 
-const fetchClients = async () => {
-    try {
-        const response = await axios.get("/api/users?role=client");
-        clients.value = response.data.data;
-    } catch (error) {
-        console.error("Error fetching clients:", error);
-    }
-};
-
-const submitForm = async () => {
+const submitForm = () => {
     loading.value = true;
     errors.value = {};
 
-    try {
-        await axios.post("/api/sales", form.value);
-        router.visit("/sales");
-    } catch (error) {
-        if (error.response?.status === 422) {
-            errors.value = error.response.data.errors;
-        } else {
-            console.error("Error creating sale:", error);
-        }
-    } finally {
-        loading.value = false;
-    }
+    form.post(route("sales.store"), {
+        onSuccess: () => {
+            router.visit(route("sales.index"));
+        },
+        onError: (error) => {
+            errors.value = error;
+        },
+        onFinish: () => {
+            loading.value = false;
+        },
+    });
 };
 
 const goBack = () => {
-    router.visit("/sales");
+    router.visit(route("sales.index"));
 };
-
-onMounted(() => {
-    fetchClients();
-});
 </script>
