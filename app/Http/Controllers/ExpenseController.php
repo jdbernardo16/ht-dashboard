@@ -32,17 +32,49 @@ class ExpenseController extends Controller
             $query->where('status', $request->get('status'));
         }
 
+        if ($request->has('date_from')) {
+            $query->whereDate('expense_date', '>=', $request->get('date_from'));
+        }
+
+        if ($request->has('date_to')) {
+            $query->whereDate('expense_date', '<=', $request->get('date_to'));
+        }
+
         // Role-based filtering
-        if (Auth::user()->hasRole('va')) {
+        if (Auth::user()->role === 'va') {
             $query->where('user_id', Auth::id());
         }
 
         $expenses = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 15));
 
+        // Format the expenses data to match frontend expectations
+        $expenses->getCollection()->transform(function ($expense) {
+            return [
+                'id' => $expense->id,
+                'description' => $expense->description,
+                'category' => $expense->category,
+                'amount' => $expense->amount,
+                'expense_date' => $expense->expense_date,
+                'status' => $expense->status,
+                'payment_method' => $expense->payment_method,
+                'merchant' => $expense->merchant,
+                'receipt_number' => $expense->receipt_number,
+                'tax_amount' => $expense->tax_amount,
+                'notes' => $expense->notes,
+                'user' => $expense->user ? [
+                    'id' => $expense->user->id,
+                    'name' => $expense->user->first_name . ' ' . $expense->user->last_name,
+                    'email' => $expense->user->email,
+                ] : null,
+                'created_at' => $expense->created_at,
+                'updated_at' => $expense->updated_at,
+            ];
+        });
+
         return Inertia::render('Expenses/Index', [
             'expenses' => $expenses,
-            'filters' => $request->only(['search', 'status'])
+            'filters' => $request->only(['search', 'status', 'date_from', 'date_to', 'min_amount', 'max_amount'])
         ]);
     }
 
@@ -69,6 +101,10 @@ class ExpenseController extends Controller
             'expense_date' => 'required|date',
             'category' => 'required|string|max:255',
             'status' => 'required|in:pending,paid,cancelled',
+            'payment_method' => 'required|in:cash,card,online,bank_transfer',
+            'merchant' => 'nullable|string|max:255',
+            'receipt_number' => 'nullable|string|max:255',
+            'tax_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
@@ -117,6 +153,10 @@ class ExpenseController extends Controller
             'expense_date' => 'sometimes|required|date',
             'category' => 'sometimes|required|string|max:255',
             'status' => 'sometimes|required|in:pending,paid,cancelled',
+            'payment_method' => 'sometimes|required|in:cash,card,online,bank_transfer',
+            'merchant' => 'nullable|string|max:255',
+            'receipt_number' => 'nullable|string|max:255',
+            'tax_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
@@ -149,7 +189,7 @@ class ExpenseController extends Controller
         $query = Expense::query();
 
         // Role-based filtering
-        if (Auth::user()->hasRole('va')) {
+        if (Auth::user()->role === 'va') {
             $query->where('user_id', Auth::id());
         }
 

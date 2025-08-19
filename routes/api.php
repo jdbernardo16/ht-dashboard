@@ -37,4 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Users API routes
     Route::apiResource('users', \App\Http\Controllers\UserController::class);
+
+    // Categories API routes
+    Route::apiResource('categories', \App\Http\Controllers\CategoryController::class);
 });

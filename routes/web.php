@@ -32,9 +32,7 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'dashboard'])->middleware(['auth', 'verified'])->name('dashboard');
 
 // Dashboard API routes
 Route::middleware(['auth', 'verified'])->prefix('api/dashboard')->group(function () {
@@ -126,23 +124,23 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('users')->group(functio
 
 // Admin Routes (Admin only)
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Admin/Dashboard');
-    })->name('admin.dashboard');
+    // Use DashboardController so the Admin dashboard page receives the same
+    // Inertia props ('dashboardData' and 'lastUpdated') as the main dashboard.
+    Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('admin.dashboard');
 });
 
 // Manager Routes (Manager and Admin)
 Route::middleware(['auth', 'verified', 'manager'])->prefix('manager')->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Manager/Dashboard');
-    })->name('manager.dashboard');
+    // Use DashboardController so the Manager dashboard page receives the
+    // same Inertia props ('dashboardData' and 'lastUpdated') as the main dashboard.
+    Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('manager.dashboard');
 });
 
 // Virtual Assistant Routes (All authenticated users)
 Route::middleware(['auth', 'verified', 'va'])->prefix('va')->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('VA/Dashboard');
-    })->name('va.dashboard');
+    // Use DashboardController so the VA dashboard page receives the
+    // same Inertia props ('dashboardData' and 'lastUpdated') as the main dashboard.
+    Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('va.dashboard');
 });
 
 require __DIR__ . '/auth.php';

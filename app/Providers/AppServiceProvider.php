@@ -2,7 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\ContentPost;
+use App\Models\Sale;
 use App\Models\Task;
+use App\Policies\ContentPostPolicy;
+use App\Policies\SalePolicy;
 use App\Policies\TaskPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
@@ -24,7 +28,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Task::class, TaskPolicy::class);
-        
+        Gate::policy(Sale::class, SalePolicy::class);
+        Gate::policy(ContentPost::class, ContentPostPolicy::class);
+
         Vite::prefetch(concurrency: 3);
     }
 }

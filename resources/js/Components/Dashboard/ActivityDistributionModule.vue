@@ -43,7 +43,7 @@
                                     {{ activity.percentage }}%
                                 </div>
                                 <div class="text-xs text-gray-500">
-                                    {{ activity.hours }}h
+                                    {{ activity.value }} tasks
                                 </div>
                             </div>
                         </div>
@@ -96,9 +96,14 @@ import DashboardModule from "./DashboardModule.vue";
 Chart.register(...registerables);
 
 const props = defineProps({
-    activities: {
-        type: Array,
-        default: () => [],
+    data: {
+        type: Object,
+        default: () => ({
+            distribution: [],
+            daily_trend: [],
+            total_activities: 0,
+            period: "Last 7 days",
+        }),
     },
     loading: {
         type: Boolean,
@@ -113,36 +118,48 @@ const props = defineProps({
 const pieChartRef = ref(null);
 let chartInstance = null;
 
-const activities = computed(
-    () =>
-        props.activities || [
+const activities = computed(() => {
+    if (!props.data.distribution || props.data.distribution.length === 0) {
+        return [
             {
                 name: "Development",
-                hours: 4.5,
+                value: 4,
                 percentage: 35,
                 color: "#3B82F6",
             },
-            { name: "Meetings", hours: 2.0, percentage: 15, color: "#10B981" },
-            { name: "Planning", hours: 3.0, percentage: 23, color: "#F59E0B" },
-            { name: "Testing", hours: 1.5, percentage: 12, color: "#EF4444" },
+            { name: "Meetings", value: 2, percentage: 15, color: "#10B981" },
+            { name: "Planning", value: 3, percentage: 23, color: "#F59E0B" },
+            { name: "Testing", value: 1, percentage: 12, color: "#EF4444" },
             {
                 name: "Documentation",
-                hours: 1.0,
+                value: 1,
                 percentage: 8,
                 color: "#8B5CF6",
             },
-            { name: "Other", hours: 1.0, percentage: 7, color: "#6B7280" },
-        ]
-);
+            { name: "Other", value: 1, percentage: 7, color: "#6B7280" },
+        ];
+    }
+
+    const total = props.data.total_activities || 1;
+    return props.data.distribution.map((activity) => ({
+        name: activity.name,
+        value: activity.value,
+        percentage: Math.round((activity.value / total) * 100),
+        color: activity.color,
+    }));
+});
 
 const totalActivities = computed(() => {
-    return activities.value.reduce((sum, activity) => sum + activity.hours, 0);
+    return (
+        props.data.total_activities ||
+        activities.value.reduce((sum, activity) => sum + activity.value, 0)
+    );
 });
 
 const mostActiveActivity = computed(() => {
     if (!activities.value.length) return "N/A";
     return activities.value.reduce((max, activity) =>
-        activity.hours > max.hours ? activity : max
+        activity.value > max.value ? activity : max
     ).name;
 });
 

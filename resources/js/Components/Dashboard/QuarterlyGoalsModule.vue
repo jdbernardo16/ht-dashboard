@@ -169,9 +169,19 @@ import { computed } from "vue";
 import DashboardModule from "./DashboardModule.vue";
 
 const props = defineProps({
-    goals: {
-        type: Array,
-        default: () => [],
+    data: {
+        type: Object,
+        default: () => ({
+            goals: [],
+            summary: {
+                total_goals: 0,
+                completed_goals: 0,
+                in_progress_goals: 0,
+                not_started_goals: 0,
+                overall_progress: 0,
+            },
+            quarter: "",
+        }),
     },
     loading: {
         type: Boolean,
@@ -183,9 +193,9 @@ const props = defineProps({
     },
 });
 
-const goals = computed(
-    () =>
-        props.goals || [
+const goals = computed(() => {
+    if (!props.data.goals || props.data.goals.length === 0) {
+        return [
             {
                 id: 1,
                 title: "Increase Monthly Revenue",
@@ -253,51 +263,110 @@ const goals = computed(
                     },
                 ],
             },
-        ]
-);
+        ];
+    }
 
-const goalCategories = computed(() => [
-    {
-        name: "Revenue",
-        count: 2,
-        total: 2,
-        completed: 1,
-        progress: 84,
-        color: "#3B82F6",
-    },
-    {
-        name: "Product",
-        count: 3,
-        total: 3,
-        completed: 3,
-        progress: 100,
-        color: "#10B981",
-    },
-    {
-        name: "Customer",
-        count: 2,
-        total: 2,
-        completed: 1,
-        progress: 92,
-        color: "#F59E0B",
-    },
-]);
+    return props.data.goals.map((goal) => ({
+        id: goal.id,
+        title: goal.title,
+        description: goal.description,
+        target: goal.target,
+        current: goal.current,
+        unit: goal.category === "revenue" ? "USD" : "%",
+        progress: goal.progress_percentage,
+        status: goal.status,
+        statusText: goal.status
+            .replace("_", " ")
+            .replace(/\b\w/g, (l) => l.toUpperCase()),
+        deadline: goal.deadline
+            ? new Date(goal.deadline).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+              })
+            : "No deadline",
+        milestones: [], // We don't have milestones in the current data structure
+    }));
+});
+
+const goalCategories = computed(() => {
+    if (!props.data.goals || props.data.goals.length === 0) {
+        return [
+            {
+                name: "Revenue",
+                count: 2,
+                total: 2,
+                completed: 1,
+                progress: 84,
+                color: "#3B82F6",
+            },
+            {
+                name: "Product",
+                count: 3,
+                total: 3,
+                completed: 3,
+                progress: 100,
+                color: "#10B981",
+            },
+            {
+                name: "Customer",
+                count: 2,
+                total: 2,
+                completed: 1,
+                progress: 92,
+                color: "#F59E0B",
+            },
+        ];
+    }
+
+    // Group goals by category
+    const categories = {};
+    const colors = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6"];
+    let colorIndex = 0;
+
+    props.data.goals.forEach((goal) => {
+        const category = goal.category || "Other";
+        if (!categories[category]) {
+            categories[category] = {
+                name: category.charAt(0).toUpperCase() + category.slice(1),
+                goals: [],
+                color: colors[colorIndex % colors.length],
+            };
+            colorIndex++;
+        }
+        categories[category].goals.push(goal);
+    });
+
+    return Object.values(categories).map((category) => {
+        const completed = category.goals.filter(
+            (g) => g.status === "completed"
+        ).length;
+        const total = category.goals.length;
+        const avgProgress =
+            category.goals.reduce((sum, g) => sum + g.progress_percentage, 0) /
+            total;
+
+        return {
+            name: category.name,
+            count: total,
+            total: total,
+            completed: completed,
+            progress: Math.round(avgProgress),
+            color: category.color,
+        };
+    });
+});
 
 const overallProgress = computed(() => {
-    if (!goals.value.length) return 0;
-    const totalProgress = goals.value.reduce(
-        (sum, goal) => sum + goal.progress,
-        0
-    );
-    return Math.round(totalProgress / goals.value.length);
+    return props.data.summary?.overall_progress || 0;
 });
 
 const completedGoals = computed(() => {
-    return goals.value.filter((goal) => goal.status === "completed").length;
+    return props.data.summary?.completed_goals || 0;
 });
 
 const totalGoals = computed(() => {
-    return goals.value.length;
+    return props.data.summary?.total_goals || 0;
 });
 
 const formatNumber = (value) => {

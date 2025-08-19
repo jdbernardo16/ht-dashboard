@@ -1,11 +1,17 @@
 <template>
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex justify-between items-center">
+            <div
+                class="flex flex-col md:flex-row md:justify-between md:items-center gap-4"
+            >
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                     Task Details
                 </h2>
-                <div class="flex space-x-2">
+
+                <!-- Action buttons: stack on small screens, inline on md+ -->
+                <div
+                    class="flex flex-col sm:flex-row sm:items-center sm:space-x-2 space-y-2 sm:space-y-0 mt-2 md:mt-0"
+                >
                     <button
                         @click="editTask"
                         class="inline-flex items-center px-4 py-2 bg-yellow-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-yellow-700 focus:bg-yellow-700 active:bg-yellow-900 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition ease-in-out duration-150"
@@ -28,355 +34,364 @@
             </div>
         </template>
 
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 text-gray-900">
-                        <!-- Task Information -->
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <!-- Main Task Info -->
-                            <div class="lg:col-span-2">
-                                <h3
-                                    class="text-lg font-medium text-gray-900 mb-4"
-                                >
-                                    Task Information
-                                </h3>
-                                <dl class="space-y-4">
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Title
-                                        </dt>
-                                        <dd
-                                            class="mt-1 text-lg font-semibold text-gray-900"
-                                        >
-                                            {{ task.title }}
-                                        </dd>
-                                    </div>
+        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="p-6 text-gray-900">
+                <!-- Task Information -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Main Task Info (col-span 2 on md+) -->
+                    <div class="md:col-span-2">
+                        <section
+                            role="group"
+                            aria-labelledby="task-info-heading"
+                            class="bg-white rounded-lg border border-gray-100 p-6 shadow-sm"
+                        >
+                            <h3
+                                id="task-info-heading"
+                                class="text-lg font-semibold text-gray-900 mb-4"
+                            >
+                                Task Information
+                            </h3>
 
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Description
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                task.description ||
-                                                "No description provided"
-                                            }}
-                                        </dd>
-                                    </div>
+                            <dl class="grid grid-cols-1 gap-4">
+                                <div class="flex flex-col">
+                                    <dt
+                                        class="text-sm font-medium text-gray-500"
+                                    >
+                                        Title
+                                    </dt>
+                                    <dd
+                                        class="mt-1 text-xl font-bold text-gray-900 break-words"
+                                    >
+                                        {{ task.title }}
+                                    </dd>
+                                </div>
 
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Notes
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                task.notes ||
-                                                "No notes provided"
-                                            }}
-                                        </dd>
-                                    </div>
+                                <div class="flex flex-col">
+                                    <dt
+                                        class="text-sm font-medium text-gray-500"
+                                    >
+                                        Description
+                                    </dt>
+                                    <dd class="mt-1 text-sm text-gray-700">
+                                        {{
+                                            task.description ||
+                                            "No description provided"
+                                        }}
+                                    </dd>
+                                </div>
 
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Tags
-                                        </dt>
-                                        <dd class="mt-1">
-                                            <div class="flex flex-wrap gap-2">
-                                                <span
-                                                    v-for="tag in formatTags(
-                                                        task.tags
-                                                    )"
-                                                    :key="tag"
-                                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                                                >
-                                                    {{ tag }}
-                                                </span>
-                                                <span
-                                                    v-if="
-                                                        !task.tags ||
-                                                        task.tags.length === 0
-                                                    "
-                                                    class="text-sm text-gray-500"
-                                                >
-                                                    No tags
-                                                </span>
-                                            </div>
-                                        </dd>
-                                    </div>
-                                </dl>
+                                <div class="flex flex-col">
+                                    <dt
+                                        class="text-sm font-medium text-gray-500"
+                                    >
+                                        Notes
+                                    </dt>
+                                    <dd class="mt-1 text-sm text-gray-700">
+                                        {{ task.notes || "No notes provided" }}
+                                    </dd>
+                                </div>
+
+                                <div class="flex flex-col">
+                                    <dt
+                                        class="text-sm font-medium text-gray-500"
+                                    >
+                                        Tags
+                                    </dt>
+                                    <dd class="mt-2">
+                                        <div class="flex flex-wrap gap-2">
+                                            <span
+                                                v-for="tag in formatTags(
+                                                    task.tags
+                                                )"
+                                                :key="tag"
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                            >
+                                                {{ tag }}
+                                            </span>
+                                            <span
+                                                v-if="
+                                                    !task.tags ||
+                                                    task.tags.length === 0
+                                                "
+                                                class="text-sm text-gray-500"
+                                            >
+                                                No tags
+                                            </span>
+                                        </div>
+                                    </dd>
+                                </div>
+                            </dl>
+                        </section>
+
+                        <!-- Related Information -->
+                        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div
+                                v-if="task.related_goal"
+                                class="bg-gray-50 rounded-lg p-4 border border-gray-100"
+                            >
+                                <h4 class="text-sm font-medium text-gray-900">
+                                    {{ task.related_goal.title }}
+                                </h4>
+                                <p class="text-xs text-gray-600 mt-1">
+                                    {{
+                                        task.related_goal.description ||
+                                        "No description"
+                                    }}
+                                </p>
+                                <div class="mt-3">
+                                    <span
+                                        :class="
+                                            getStatusClass(
+                                                task.related_goal.status
+                                            )
+                                        "
+                                        class="px-2 py-1 text-xs font-medium rounded-full"
+                                    >
+                                        {{
+                                            formatStatus(
+                                                task.related_goal.status
+                                            )
+                                        }}
+                                    </span>
+                                </div>
                             </div>
 
-                            <!-- Task Details & Metadata -->
-                            <div>
-                                <h3
-                                    class="text-lg font-medium text-gray-900 mb-4"
-                                >
-                                    Task Details
-                                </h3>
-                                <dl class="space-y-4">
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Status
-                                        </dt>
-                                        <dd class="mt-1">
-                                            <span
-                                                :class="
-                                                    getStatusClass(task.status)
-                                                "
-                                                class="px-2 py-1 text-xs font-medium rounded-full"
-                                            >
-                                                {{ formatStatus(task.status) }}
-                                            </span>
-                                        </dd>
-                                    </div>
+                            <div
+                                v-if="task.parent_task"
+                                class="bg-gray-50 rounded-lg p-4 border border-gray-100"
+                            >
+                                <h4 class="text-sm font-medium text-gray-900">
+                                    {{ task.parent_task.title }}
+                                </h4>
+                                <p class="text-xs text-gray-600 mt-1">
+                                    {{
+                                        task.parent_task.description ||
+                                        "No description"
+                                    }}
+                                </p>
+                                <div class="mt-3">
+                                    <span
+                                        :class="
+                                            getStatusClass(
+                                                task.parent_task.status
+                                            )
+                                        "
+                                        class="px-2 py-1 text-xs font-medium rounded-full"
+                                    >
+                                        {{
+                                            formatStatus(
+                                                task.parent_task.status
+                                            )
+                                        }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Priority
-                                        </dt>
-                                        <dd class="mt-1">
-                                            <span
-                                                :class="
-                                                    getPriorityClass(
-                                                        task.priority
-                                                    )
-                                                "
-                                                class="px-2 py-1 text-xs font-medium rounded-full"
-                                            >
-                                                {{
-                                                    formatPriority(
-                                                        task.priority
-                                                    )
-                                                }}
-                                            </span>
-                                        </dd>
-                                    </div>
+                    <!-- Sidebar: Task Details & Metadata -->
+                    <aside class="md:col-span-1">
+                        <section
+                            role="group"
+                            aria-labelledby="task-meta-heading"
+                            class="sticky top-24 bg-white rounded-lg border border-gray-100 p-4 shadow-sm"
+                        >
+                            <h3
+                                id="task-meta-heading"
+                                class="text-sm font-semibold text-gray-900 mb-4"
+                            >
+                                Task Details
+                            </h3>
 
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
+                            <dl
+                                class="grid grid-cols-1 gap-3 text-sm text-gray-700"
+                            >
+                                <div class="flex justify-between items-start">
+                                    <dt class="text-gray-500">Status</dt>
+                                    <dd>
+                                        <span
+                                            :class="getStatusClass(task.status)"
+                                            class="px-2 py-1 text-xs font-medium rounded-full"
                                         >
-                                            Due Date
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{ formatDate(task.due_date) }}
-                                        </dd>
-                                    </div>
+                                            {{ formatStatus(task.status) }}
+                                        </span>
+                                    </dd>
+                                </div>
 
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
+                                <div class="flex justify-between items-start">
+                                    <dt class="text-gray-500">Priority</dt>
+                                    <dd>
+                                        <span
+                                            :class="
+                                                getPriorityClass(task.priority)
+                                            "
+                                            class="px-2 py-1 text-xs font-medium rounded-full"
                                         >
-                                            Assigned To
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                task.assigned_to_user?.name ||
-                                                "Unassigned"
-                                            }}
-                                        </dd>
-                                    </div>
+                                            {{ formatPriority(task.priority) }}
+                                        </span>
+                                    </dd>
+                                </div>
 
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Category
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{ task.category || "No category" }}
-                                        </dd>
-                                    </div>
+                                <div class="flex justify-between items-start">
+                                    <dt class="text-gray-500">Due</dt>
+                                    <dd class="text-right text-gray-900">
+                                        {{ formatDate(task.due_date) }}
+                                    </dd>
+                                </div>
 
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Estimated Hours
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                task.estimated_hours || 0
-                                            }}
-                                            hours
-                                        </dd>
-                                    </div>
+                                <div class="flex justify-between items-start">
+                                    <dt class="text-gray-500">Assigned</dt>
+                                    <dd class="text-right text-gray-900">
+                                        {{
+                                            task.assigned_to_user?.name ||
+                                            "Unassigned"
+                                        }}
+                                    </dd>
+                                </div>
 
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Actual Hours
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{ task.actual_hours || 0 }} hours
-                                        </dd>
-                                    </div>
+                                <div class="flex justify-between items-start">
+                                    <dt class="text-gray-500">Category</dt>
+                                    <dd class="text-right text-gray-900">
+                                        {{ task.category || "No category" }}
+                                    </dd>
+                                </div>
 
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
+                                <div class="flex justify-between items-start">
+                                    <dt class="text-gray-500">Est. Hours</dt>
+                                    <dd class="text-right text-gray-900">
+                                        {{ task.estimated_hours || 0 }}h
+                                    </dd>
+                                </div>
+
+                                <div class="flex justify-between items-start">
+                                    <dt class="text-gray-500">Actual</dt>
+                                    <dd class="text-right text-gray-900">
+                                        {{ task.actual_hours || 0 }}h
+                                    </dd>
+                                </div>
+
+                                <div class="col-span-1">
+                                    <dt class="text-gray-500">Progress</dt>
+                                    <dd class="mt-1">
+                                        <div
+                                            class="w-full bg-gray-200 rounded-full h-2 overflow-hidden"
                                         >
-                                            Progress
-                                        </dt>
-                                        <dd class="mt-1">
                                             <div
-                                                class="w-full bg-gray-200 rounded-full h-2"
-                                            >
-                                                <div
-                                                    class="bg-blue-600 h-2 rounded-full"
-                                                    :style="`width: ${getProgressPercentage(
-                                                        task
-                                                    )}%`"
-                                                ></div>
-                                            </div>
-                                            <span class="text-xs text-gray-600">
-                                                {{
-                                                    getProgressPercentage(task)
-                                                }}% complete
-                                            </span>
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
+                                                class="bg-blue-600 h-2 rounded-full"
+                                                :style="`width: ${getProgressPercentage(
+                                                    task
+                                                )}%`"
+                                            ></div>
+                                        </div>
+                                        <div
+                                            class="text-xs text-gray-600 mt-1 text-right"
                                         >
-                                            Created By
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{ task.user?.name || "System" }}
-                                        </dd>
-                                    </div>
+                                            {{ getProgressPercentage(task) }}%
+                                            complete
+                                        </div>
+                                    </dd>
+                                </div>
 
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Created At
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                formatDateTime(task.created_at)
-                                            }}
-                                        </dd>
-                                    </div>
+                                <div class="flex justify-between items-start">
+                                    <dt class="text-gray-500">Created By</dt>
+                                    <dd class="text-right text-gray-900">
+                                        {{ task.user?.name || "System" }}
+                                    </dd>
+                                </div>
 
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Last Updated
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                formatDateTime(task.updated_at)
-                                            }}
-                                        </dd>
-                                    </div>
+                                <div class="flex justify-between items-start">
+                                    <dt class="text-gray-500">Created</dt>
+                                    <dd class="text-right text-gray-900">
+                                        {{ formatDateTime(task.created_at) }}
+                                    </dd>
+                                </div>
 
-                                    <div v-if="task.completed_at">
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Completed At
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                formatDateTime(
-                                                    task.completed_at
-                                                )
-                                            }}
-                                        </dd>
-                                    </div>
-                                </dl>
+                                <div class="flex justify-between items-start">
+                                    <dt class="text-gray-500">Updated</dt>
+                                    <dd class="text-right text-gray-900">
+                                        {{ formatDateTime(task.updated_at) }}
+                                    </dd>
+                                </div>
+
+                                <div
+                                    v-if="task.completed_at"
+                                    class="flex justify-between items-start"
+                                >
+                                    <dt class="text-gray-500">Completed</dt>
+                                    <dd class="text-right text-gray-900">
+                                        {{ formatDateTime(task.completed_at) }}
+                                    </dd>
+                                </div>
+                            </dl>
+                        </section>
+                    </aside>
+                </div>
+
+                <!-- Related Information -->
+                <div class="mt-8 border-t pt-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div v-if="task.related_goal">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                                Related Goal
+                            </h3>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900">
+                                    {{ task.related_goal.title }}
+                                </h4>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    {{
+                                        task.related_goal.description ||
+                                        "No description"
+                                    }}
+                                </p>
+                                <div class="mt-2">
+                                    <span
+                                        :class="
+                                            getStatusClass(
+                                                task.related_goal.status
+                                            )
+                                        "
+                                        class="px-2 py-1 text-xs font-medium rounded-full"
+                                    >
+                                        {{
+                                            formatStatus(
+                                                task.related_goal.status
+                                            )
+                                        }}
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Related Information -->
-                        <div class="mt-8 border-t pt-6">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div v-if="task.related_goal">
-                                    <h3
-                                        class="text-lg font-medium text-gray-900 mb-4"
+                        <div v-if="task.parent_task">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                                Parent Task
+                            </h3>
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-gray-900">
+                                    {{ task.parent_task.title }}
+                                </h4>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    {{
+                                        task.parent_task.description ||
+                                        "No description"
+                                    }}
+                                </p>
+                                <div class="mt-2">
+                                    <span
+                                        :class="
+                                            getStatusClass(
+                                                task.parent_task.status
+                                            )
+                                        "
+                                        class="px-2 py-1 text-xs font-medium rounded-full"
                                     >
-                                        Related Goal
-                                    </h3>
-                                    <div class="bg-gray-50 rounded-lg p-4">
-                                        <h4 class="font-medium text-gray-900">
-                                            {{ task.related_goal.title }}
-                                        </h4>
-                                        <p class="text-sm text-gray-600 mt-1">
-                                            {{
-                                                task.related_goal.description ||
-                                                "No description"
-                                            }}
-                                        </p>
-                                        <div class="mt-2">
-                                            <span
-                                                :class="
-                                                    getStatusClass(
-                                                        task.related_goal.status
-                                                    )
-                                                "
-                                                class="px-2 py-1 text-xs font-medium rounded-full"
-                                            >
-                                                {{
-                                                    formatStatus(
-                                                        task.related_goal.status
-                                                    )
-                                                }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div v-if="task.parent_task">
-                                    <h3
-                                        class="text-lg font-medium text-gray-900 mb-4"
-                                    >
-                                        Parent Task
-                                    </h3>
-                                    <div class="bg-gray-50 rounded-lg p-4">
-                                        <h4 class="font-medium text-gray-900">
-                                            {{ task.parent_task.title }}
-                                        </h4>
-                                        <p class="text-sm text-gray-600 mt-1">
-                                            {{
-                                                task.parent_task.description ||
-                                                "No description"
-                                            }}
-                                        </p>
-                                        <div class="mt-2">
-                                            <span
-                                                :class="
-                                                    getStatusClass(
-                                                        task.parent_task.status
-                                                    )
-                                                "
-                                                class="px-2 py-1 text-xs font-medium rounded-full"
-                                            >
-                                                {{
-                                                    formatStatus(
-                                                        task.parent_task.status
-                                                    )
-                                                }}
-                                            </span>
-                                        </div>
-                                    </div>
+                                        {{
+                                            formatStatus(
+                                                task.parent_task.status
+                                            )
+                                        }}
+                                    </span>
                                 </div>
                             </div>
                         </div>

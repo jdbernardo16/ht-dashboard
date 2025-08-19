@@ -48,7 +48,7 @@
                                             Product Name
                                         </dt>
                                         <dd class="mt-1 text-sm text-gray-900">
-                                            {{ sale.product_name }}
+                                            {{ props.sale.product_name }}
                                         </dd>
                                     </div>
 
@@ -59,7 +59,9 @@
                                             Client
                                         </dt>
                                         <dd class="mt-1 text-sm text-gray-900">
-                                            {{ sale.client?.name || "N/A" }}
+                                            {{
+                                                props.sale.client?.name || "N/A"
+                                            }}
                                         </dd>
                                     </div>
 
@@ -70,7 +72,11 @@
                                             Amount
                                         </dt>
                                         <dd class="mt-1 text-sm text-gray-900">
-                                            ${{ formatCurrency(sale.amount) }}
+                                            ${{
+                                                formatCurrency(
+                                                    props.sale.amount
+                                                )
+                                            }}
                                         </dd>
                                     </div>
 
@@ -81,7 +87,9 @@
                                             Sale Date
                                         </dt>
                                         <dd class="mt-1 text-sm text-gray-900">
-                                            {{ formatDate(sale.sale_date) }}
+                                            {{
+                                                formatDate(props.sale.sale_date)
+                                            }}
                                         </dd>
                                     </div>
 
@@ -94,11 +102,17 @@
                                         <dd class="mt-1">
                                             <span
                                                 :class="
-                                                    getStatusClass(sale.status)
+                                                    getStatusClass(
+                                                        props.sale.status
+                                                    )
                                                 "
                                                 class="px-2 py-1 text-xs font-medium rounded-full"
                                             >
-                                                {{ formatStatus(sale.status) }}
+                                                {{
+                                                    formatStatus(
+                                                        props.sale.status
+                                                    )
+                                                }}
                                             </span>
                                         </dd>
                                     </div>
@@ -112,7 +126,7 @@
                                         <dd class="mt-1 text-sm text-gray-900">
                                             {{
                                                 formatPaymentMethod(
-                                                    sale.payment_method
+                                                    props.sale.payment_method
                                                 )
                                             }}
                                         </dd>
@@ -135,7 +149,7 @@
                                         </dt>
                                         <dd class="mt-1 text-sm text-gray-900">
                                             {{
-                                                sale.description ||
+                                                props.sale.description ||
                                                 "No description provided"
                                             }}
                                         </dd>
@@ -149,7 +163,7 @@
                                         </dt>
                                         <dd class="mt-1 text-sm text-gray-900">
                                             {{
-                                                sale.notes ||
+                                                props.sale.notes ||
                                                 "No notes provided"
                                             }}
                                         </dd>
@@ -162,7 +176,10 @@
                                             Created By
                                         </dt>
                                         <dd class="mt-1 text-sm text-gray-900">
-                                            {{ sale.user?.name || "System" }}
+                                            {{
+                                                props.sale.user?.name ||
+                                                "System"
+                                            }}
                                         </dd>
                                     </div>
 
@@ -174,7 +191,9 @@
                                         </dt>
                                         <dd class="mt-1 text-sm text-gray-900">
                                             {{
-                                                formatDateTime(sale.created_at)
+                                                formatDateTime(
+                                                    props.sale.created_at
+                                                )
                                             }}
                                         </dd>
                                     </div>
@@ -187,7 +206,9 @@
                                         </dt>
                                         <dd class="mt-1 text-sm text-gray-900">
                                             {{
-                                                formatDateTime(sale.updated_at)
+                                                formatDateTime(
+                                                    props.sale.updated_at
+                                                )
                                             }}
                                         </dd>
                                     </div>
@@ -210,7 +231,7 @@
                                     <dd
                                         class="mt-1 text-2xl font-semibold text-gray-900"
                                     >
-                                        ${{ formatCurrency(sale.amount) }}
+                                        ${{ formatCurrency(props.sale.amount) }}
                                     </dd>
                                 </div>
 
@@ -235,10 +256,16 @@
                                     </dt>
                                     <dd class="mt-1">
                                         <span
-                                            :class="getStatusClass(sale.status)"
+                                            :class="
+                                                getStatusClass(
+                                                    props.sale.status
+                                                )
+                                            "
                                             class="px-2 py-1 text-xs font-medium rounded-full"
                                         >
-                                            {{ formatStatus(sale.status) }}
+                                            {{
+                                                formatStatus(props.sale.status)
+                                            }}
                                         </span>
                                     </dd>
                                 </div>
@@ -252,49 +279,35 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { computed } from "vue";
 import { router } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import axios from "axios";
-import { createApiHeaders } from "@/Utils/utils";
 
 const props = defineProps({
     sale: {
-        type: String,
+        type: Object,
         required: true,
     },
 });
 
-const sale = ref({});
-
-const fetchSale = async () => {
-    try {
-        const response = await axios.get(`/api/sales/${props.sale}`, {
-            headers: createApiHeaders(),
-            withCredentials: true,
-        });
-        sale.value = response.data;
-    } catch (error) {
-        console.error("Error fetching sale:", error);
-        router.visit("/sales");
-    }
-};
-
 const editSale = () => {
-    router.visit(`/sales/${props.id}/edit`);
+    router.visit(`/sales/${props.sale.id}/edit`);
 };
 
-const deleteSale = async () => {
+const deleteSale = () => {
     if (confirm("Are you sure you want to delete this sale?")) {
-        try {
-            await axios.delete(`/api/sales/${props.id}`, {
-                headers: createApiHeaders(),
-                withCredentials: true,
-            });
-            router.visit("/sales");
-        } catch (error) {
-            console.error("Error deleting sale:", error);
-        }
+        router.delete(`/sales/${props.sale.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                router.visit("/sales");
+            },
+            onError: (errors) => {
+                console.error("Error deleting sale:", errors);
+                if (errors.message?.includes("403")) {
+                    alert("You don't have permission to delete this sale.");
+                }
+            },
+        });
     }
 };
 
@@ -339,15 +352,10 @@ const getStatusClass = (status) => {
 };
 
 const daysSinceSale = computed(() => {
-    const saleDate = new Date(sale.value.sale_date);
+    const saleDate = new Date(props.sale.sale_date);
     const today = new Date();
     const diffTime = Math.abs(today - saleDate);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
-});
-
-// Lifecycle
-onMounted(() => {
-    fetchSale();
 });
 </script>

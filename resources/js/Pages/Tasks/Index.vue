@@ -68,7 +68,11 @@
                     </template>
 
                     <template #assigned_to="{ item }">
-                        {{ item.assigned_to_user?.name || "Unassigned" }}
+                        {{
+                            item.assigned_to?.full_name ||
+                            item.assigned_to?.name ||
+                            "Unassigned"
+                        }}
                     </template>
 
                     <template #estimated_hours="{ item }">
@@ -285,7 +289,7 @@ const tasks = computed(() => props.tasks.data || []);
 const userOptions = computed(() =>
     users.value.map((user) => ({
         value: user.id,
-        label: user.name,
+        label: user.full_name || user.name,
     }))
 );
 

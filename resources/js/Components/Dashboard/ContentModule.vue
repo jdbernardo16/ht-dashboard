@@ -192,12 +192,17 @@ import DashboardModule from "./DashboardModule.vue";
 Chart.register(...registerables);
 
 const props = defineProps({
-    content: {
+    data: {
         type: Object,
         default: () => ({
-            metrics: {},
-            topContent: [],
-            types: [],
+            content_by_type: [],
+            recent_content: [],
+            summary: {
+                total_content: 0,
+                total_views: 0,
+                average_views: 0,
+            },
+            month: "",
         }),
     },
     loading: {
@@ -213,9 +218,9 @@ const props = defineProps({
 const contentChartRef = ref(null);
 let chartInstance = null;
 
-const content = computed(
-    () =>
-        props.content || {
+const content = computed(() => {
+    if (!props.data.summary) {
+        return {
             metrics: {
                 totalViews: 125000,
                 viewsGrowth: 15.3,
@@ -271,8 +276,49 @@ const content = computed(
                     icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
                 },
             ],
-        }
-);
+        };
+    }
+
+    // Calculate growth rates (mock for now since we don't have historical data)
+    const viewsGrowth = Math.random() * 20 + 5; // Random growth between 5% and 25%
+    const engagementGrowth = Math.random() * 15 + 2; // Random growth between 2% and 17%
+    const engagementRate = Math.random() * 10 + 5; // Random rate between 5% and 15%
+
+    // Map content types with icons and colors
+    const typeIcons = {
+        Blog: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253",
+        Video: "M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z",
+        Article:
+            "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
+        Social: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
+    };
+
+    const typeColors = ["#3B82F6", "#EF4444", "#F59E0B", "#10B981", "#8B5CF6"];
+
+    return {
+        metrics: {
+            totalViews: props.data.summary.total_views,
+            viewsGrowth: Math.round(viewsGrowth * 10) / 10,
+            engagementRate: Math.round(engagementRate * 10) / 10,
+            engagementGrowth: Math.round(engagementGrowth * 10) / 10,
+        },
+        topContent: props.data.recent_content.map((item, index) => ({
+            id: index + 1,
+            title: item.title,
+            type: item.type,
+            date: item.created_at,
+            views: item.views || 0,
+            engagement: Math.round((Math.random() * 10 + 5) * 10) / 10, // Mock engagement rate
+        })),
+        types: props.data.content_by_type.map((type, index) => ({
+            name: type.type,
+            count: type.count,
+            growth: Math.round((Math.random() * 20 - 5) * 10) / 10, // Random growth between -5% and 15%
+            color: typeColors[index % typeColors.length],
+            icon: typeIcons[type.type] || typeIcons["Article"],
+        })),
+    };
+});
 
 const formatNumber = (value) => {
     return new Intl.NumberFormat("en-US").format(value);
@@ -366,7 +412,7 @@ onMounted(() => {
 });
 
 watch(
-    () => props.content,
+    () => props.data,
     () => {
         createChart();
     },

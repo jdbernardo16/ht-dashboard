@@ -49,6 +49,27 @@ class SalesController extends Controller
         $sales = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 15));
 
+        // Format the sales data to match frontend expectations
+        $sales->getCollection()->transform(function ($sale) {
+            return [
+                'id' => $sale->id,
+                'product_name' => $sale->product_name,
+                'client' => $sale->client ? [
+                    'id' => $sale->client->id,
+                    'name' => $sale->client->first_name . ' ' . $sale->client->last_name,
+                    'email' => $sale->client->email,
+                ] : null,
+                'amount' => $sale->amount,
+                'sale_date' => $sale->sale_date,
+                'status' => $sale->status,
+                'payment_method' => $sale->payment_method,
+                'description' => $sale->description,
+                'type' => $sale->type,
+                'created_at' => $sale->created_at,
+                'updated_at' => $sale->updated_at,
+            ];
+        });
+
         return Inertia::render('Sales/Index', [
             'sales' => $sales,
             'filters' => $request->only(['search', 'status', 'date_from', 'date_to', 'min_amount', 'max_amount'])
@@ -92,7 +113,6 @@ class SalesController extends Controller
         ]);
 
         $validated['user_id'] = Auth::id();
-        $validated['date'] = $validated['sale_date'];
         $validated['type'] = 'Cards'; // Default type, adjust as needed
 
         // Map form fields to database columns
@@ -100,9 +120,12 @@ class SalesController extends Controller
             'user_id' => $validated['user_id'],
             'client_id' => $validated['client_id'],
             'type' => $validated['type'],
+            'product_name' => $validated['product_name'],
             'amount' => $validated['amount'],
-            'date' => $validated['date'],
+            'sale_date' => $validated['sale_date'],
             'description' => $validated['description'] ?? null,
+            'status' => $validated['status'],
+            'payment_method' => $validated['payment_method'],
         ];
 
         $sale = Sale::create($saleData);
@@ -130,8 +153,22 @@ class SalesController extends Controller
     {
         Gate::authorize('update', $sale);
 
+        $clients = User::where('role', 'client')
+            ->select('id', 'first_name', 'last_name', 'email')
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get()
+            ->map(function ($client) {
+                return [
+                    'id' => $client->id,
+                    'name' => $client->first_name . ' ' . $client->last_name,
+                    'email' => $client->email
+                ];
+            });
+
         return Inertia::render('Sales/Edit', [
-            'sale' => $sale->load(['user', 'client'])
+            'sale' => $sale->load(['user', 'client']),
+            'clients' => $clients
         ]);
     }
 

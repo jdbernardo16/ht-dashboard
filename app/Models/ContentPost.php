@@ -11,19 +11,142 @@ class ContentPost extends Model
 
     protected $fillable = [
         'user_id',
+        'client_id',
+        'category_id',
         'platform',
+        'content_type',
+        'title',
+        'description',
+        'content_url',
         'post_count',
-        'date',
+        'scheduled_date',
+        'published_date',
+        'status',
         'engagement_metrics',
+        'content_category',
+        'tags',
+        'notes',
+        'meta_description',
+        'seo_keywords',
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'scheduled_date' => 'date',
+        'published_date' => 'date',
+        'post_count' => 'integer',
         'engagement_metrics' => 'array',
+        'tags' => 'array',
+        'status' => 'string',
+        'platform' => 'string',
+        'content_type' => 'string',
+        'content_category' => 'string',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function client()
+    {
+        return $this->belongsTo(User::class, 'client_id');
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Scope for filtering by status
+     */
+    public function scopeStatus($query, $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    /**
+     * Scope for filtering by platform
+     */
+    public function scopePlatform($query, $platform)
+    {
+        return $query->where('platform', $platform);
+    }
+
+    /**
+     * Scope for filtering by date range
+     */
+    public function scopeDateRange($query, $startDate, $endDate)
+    {
+        return $query->whereBetween('scheduled_date', [$startDate, $endDate]);
+    }
+
+    /**
+     * Scope for filtering by content type
+     */
+    public function scopeContentType($query, $type)
+    {
+        return $query->where('content_type', $type);
+    }
+
+    /**
+     * Check if post is published
+     */
+    public function isPublished(): bool
+    {
+        return $this->status === 'published' && $this->published_date !== null;
+    }
+
+    /**
+     * Check if post is scheduled
+     */
+    public function isScheduled(): bool
+    {
+        return $this->status === 'scheduled' && $this->scheduled_date > now();
+    }
+
+    /**
+     * Check if post is draft
+     */
+    public function isDraft(): bool
+    {
+        return $this->status === 'draft';
+    }
+
+    /**
+     * Get engagement rate
+     */
+    public function getEngagementRateAttribute()
+    {
+        if (!$this->engagement_metrics || !isset($this->engagement_metrics['views'])) {
+            return 0;
+        }
+
+        $views = $this->engagement_metrics['views'] ?? 0;
+        $likes = $this->engagement_metrics['likes'] ?? 0;
+        $comments = $this->engagement_metrics['comments'] ?? 0;
+        $shares = $this->engagement_metrics['shares'] ?? 0;
+
+        if ($views === 0) {
+            return 0;
+        }
+
+        return round((($likes + $comments + $shares) / $views) * 100, 2);
+    }
+
+    /**
+     * Get total engagement count
+     */
+    public function getTotalEngagementAttribute()
+    {
+        if (!$this->engagement_metrics) {
+            return 0;
+        }
+
+        $likes = $this->engagement_metrics['likes'] ?? 0;
+        $comments = $this->engagement_metrics['comments'] ?? 0;
+        $shares = $this->engagement_metrics['shares'] ?? 0;
+
+        return $likes + $comments + $shares;
     }
 }

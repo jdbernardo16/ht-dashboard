@@ -223,15 +223,18 @@ import DashboardModule from "./DashboardModule.vue";
 Chart.register(...registerables);
 
 const props = defineProps({
-    sales: {
+    data: {
         type: Object,
         default: () => ({
-            totalRevenue: 0,
-            growth: 0,
-            newCustomers: 0,
-            customerGrowth: 0,
-            breakdown: [],
-            recentSales: [],
+            monthly_sales: [],
+            summary: {
+                total_sales: 0,
+                total_revenue: 0,
+                average_sale: 0,
+                highest_sale: 0,
+            },
+            top_products: [],
+            month: "",
         }),
     },
     loading: {
@@ -247,9 +250,9 @@ const props = defineProps({
 const revenueChartRef = ref(null);
 let chartInstance = null;
 
-const sales = computed(
-    () =>
-        props.sales || {
+const sales = computed(() => {
+    if (!props.data.summary) {
+        return {
             totalRevenue: 125000,
             growth: 12.5,
             newCustomers: 45,
@@ -285,8 +288,31 @@ const sales = computed(
                     status: "pending",
                 },
             ],
-        }
-);
+        };
+    }
+
+    // Calculate growth from monthly sales data
+    const monthlySales = props.data.monthly_sales || [];
+    const growth =
+        monthlySales.length > 1
+            ? (((monthlySales[monthlySales.length - 1]?.sales || 0) -
+                  (monthlySales[monthlySales.length - 2]?.sales || 0)) /
+                  (monthlySales[monthlySales.length - 2]?.sales || 1)) *
+              100
+            : 0;
+
+    return {
+        totalRevenue: props.data.summary.total_revenue,
+        growth: Math.round(growth * 10) / 10,
+        newCustomers: props.data.summary.total_sales, // Using total sales as proxy for customers
+        customerGrowth: Math.round(growth * 10) / 10,
+        breakdown: props.data.top_products.map((product) => ({
+            category: product.name,
+            amount: product.sales,
+        })),
+        recentSales: [], // We don't have recent sales data in the current structure
+    };
+});
 
 const createChart = () => {
     if (!revenueChartRef.value) return;
@@ -297,8 +323,20 @@ const createChart = () => {
         chartInstance.destroy();
     }
 
-    const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const data = [12000, 19000, 15000, 25000, 22000, 30000, 28000];
+    const monthlySales = props.data.monthly_sales || [];
+    const labels =
+        monthlySales.length > 0
+            ? monthlySales.map((item) =>
+                  new Date(item.date).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                  })
+              )
+            : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const data =
+        monthlySales.length > 0
+            ? monthlySales.map((item) => item.sales)
+            : [12000, 19000, 15000, 25000, 22000, 30000, 28000];
 
     chartInstance = new Chart(ctx, {
         type: "line",
@@ -329,7 +367,10 @@ const createChart = () => {
                     beginAtZero: true,
                     ticks: {
                         callback: function (value) {
-                            return "$" + value / 1000 + "k";
+                            return (
+                                "$" +
+                                (value >= 1000 ? value / 1000 + "k" : value)
+                            );
                         },
                     },
                 },
@@ -357,7 +398,7 @@ onMounted(() => {
 });
 
 watch(
-    () => props.sales,
+    () => props.data,
     () => {
         createChart();
     },

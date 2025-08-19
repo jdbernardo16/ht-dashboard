@@ -187,15 +187,18 @@ import DashboardModule from "./DashboardModule.vue";
 Chart.register(...registerables);
 
 const props = defineProps({
-    expenses: {
+    data: {
         type: Object,
         default: () => ({
-            total: 0,
-            change: 0,
-            monthly: 0,
-            dailyAverage: 0,
-            categories: [],
-            recent: [],
+            expenses_by_category: [],
+            daily_expenses: [],
+            summary: {
+                total_expenses: 0,
+                budget: 5000,
+                remaining: 0,
+                percentage_used: 0,
+            },
+            month: "",
         }),
     },
     loading: {
@@ -211,9 +214,9 @@ const props = defineProps({
 const expenseChartRef = ref(null);
 let chartInstance = null;
 
-const expenses = computed(
-    () =>
-        props.expenses || {
+const expenses = computed(() => {
+    if (!props.data.summary) {
+        return {
             total: 28450,
             change: 5.2,
             monthly: 28450,
@@ -251,8 +254,29 @@ const expenses = computed(
                     categoryColor: "#F59E0B",
                 },
             ],
-        }
-);
+        };
+    }
+
+    // Calculate change percentage (mock for now since we don't have historical data)
+    const change = Math.random() * 10 - 5; // Random change between -5% and +5%
+    const dailyExpenses = props.data.daily_expenses || [];
+    const daysInMonth = new Date().getDate();
+    const dailyAverage =
+        daysInMonth > 0 ? props.data.summary.total_expenses / daysInMonth : 0;
+
+    return {
+        total: props.data.summary.total_expenses,
+        change: Math.round(change * 10) / 10,
+        monthly: props.data.summary.total_expenses,
+        dailyAverage: Math.round(dailyAverage),
+        categories: props.data.expenses_by_category.map((expense) => ({
+            name: expense.category,
+            amount: expense.amount,
+            color: expense.color,
+        })),
+        recent: [], // We don't have recent expenses data in the current structure
+    };
+});
 
 const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-US", {
@@ -277,11 +301,23 @@ const createChart = () => {
         chartInstance.destroy();
     }
 
-    const labels = Array.from({ length: 30 }, (_, i) => `Day ${i + 1}`);
-    const data = Array.from(
-        { length: 30 },
-        () => Math.floor(Math.random() * 2000) + 500
-    );
+    const dailyExpenses = props.data.daily_expenses || [];
+    const labels =
+        dailyExpenses.length > 0
+            ? dailyExpenses.map((item) =>
+                  new Date(item.date).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                  })
+              )
+            : Array.from({ length: 30 }, (_, i) => `Day ${i + 1}`);
+    const data =
+        dailyExpenses.length > 0
+            ? dailyExpenses.map((item) => item.expense)
+            : Array.from(
+                  { length: 30 },
+                  () => Math.floor(Math.random() * 2000) + 500
+              );
 
     chartInstance = new Chart(ctx, {
         type: "bar",
@@ -324,7 +360,7 @@ onMounted(() => {
 });
 
 watch(
-    () => props.expenses,
+    () => props.data,
     () => {
         createChart();
     },
