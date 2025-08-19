@@ -2,8 +2,8 @@
     <h3
         :class="
             cn(
-                'text-2xl font-semibold leading-none tracking-tight',
-                $attrs.class || ''
+                'text-lg font-semibold leading-none tracking-tight',
+                $attrs.class
             )
         "
     >
@@ -11,6 +11,6 @@
     </h3>
 </template>
 
-<script setup>
-import { cn } from "@/Utils/utils";
+<script setup lang="ts">
+import { cn } from "@/Utils/cn";
 </script>

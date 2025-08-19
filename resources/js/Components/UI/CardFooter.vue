@@ -1,9 +1,9 @@
 <template>
-    <div :class="cn('flex items-center p-6 pt-0', $attrs.class || '')">
+    <div :class="cn('flex items-center p-6 pt-0', $attrs.class)">
         <slot />
     </div>
 </template>
 
-<script setup>
-import { cn } from "@/Utils/utils";
+<script setup lang="ts">
+import { cn } from "@/Utils/cn";
 </script>

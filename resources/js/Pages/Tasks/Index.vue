@@ -310,26 +310,7 @@ const updateFormFields = () => {
 };
 
 const createTask = () => {
-    isEdit.value = false;
-    form.value = {
-        title: "",
-        description: "",
-        priority: "medium",
-        status: "pending",
-        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0],
-        assigned_to: "",
-        category: "",
-        estimated_hours: 0,
-        actual_hours: 0,
-        tags: "",
-        notes: "",
-        related_goal_id: "",
-        is_recurring: false,
-        recurring_frequency: "",
-    };
-    showModal.value = true;
+    router.visit("/tasks/create");
 };
 
 const editTask = (task) => {

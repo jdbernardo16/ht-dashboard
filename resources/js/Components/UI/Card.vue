@@ -2,8 +2,8 @@
     <div
         :class="
             cn(
-                'rounded-xl border bg-card text-card-foreground shadow-soft',
-                $attrs.class || ''
+                'rounded-lg border bg-card text-card-foreground shadow-sm',
+                $attrs.class
             )
         "
     >
@@ -11,6 +11,6 @@
     </div>
 </template>
 
-<script setup>
-import { cn } from "@/Utils/utils";
+<script setup lang="ts">
+import { cn } from "@/Utils/cn";
 </script>

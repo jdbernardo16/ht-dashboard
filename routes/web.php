@@ -7,6 +7,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -34,6 +35,17 @@ Route::get('/', function () {
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+// Dashboard API routes
+Route::middleware(['auth', 'verified'])->prefix('api/dashboard')->group(function () {
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard.api.index');
+    Route::get('/daily-summary', [DashboardController::class, 'getDailySummary'])->name('dashboard.api.daily-summary');
+    Route::get('/activity-distribution', [DashboardController::class, 'getActivityDistribution'])->name('dashboard.api.activity-distribution');
+    Route::get('/sales-metrics', [DashboardController::class, 'getSalesMetrics'])->name('dashboard.api.sales-metrics');
+    Route::get('/expenses', [DashboardController::class, 'getExpenses'])->name('dashboard.api.expenses');
+    Route::get('/content-stats', [DashboardController::class, 'getContentStats'])->name('dashboard.api.content-stats');
+    Route::get('/quarterly-goals', [DashboardController::class, 'getQuarterlyGoals'])->name('dashboard.api.quarterly-goals');
+});
 
 // No API routes - using pure Inertia routing
 

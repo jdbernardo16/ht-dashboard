@@ -256,9 +256,10 @@ import { ref, computed, onMounted } from "vue";
 import { router } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import axios from "axios";
+import { createApiHeaders } from "@/Utils/utils";
 
 const props = defineProps({
-    id: {
+    sale: {
         type: String,
         required: true,
     },
@@ -268,7 +269,10 @@ const sale = ref({});
 
 const fetchSale = async () => {
     try {
-        const response = await axios.get(`/api/sales/${props.id}`);
+        const response = await axios.get(`/api/sales/${props.sale}`, {
+            headers: createApiHeaders(),
+            withCredentials: true,
+        });
         sale.value = response.data;
     } catch (error) {
         console.error("Error fetching sale:", error);
@@ -283,7 +287,10 @@ const editSale = () => {
 const deleteSale = async () => {
     if (confirm("Are you sure you want to delete this sale?")) {
         try {
-            await axios.delete(`/api/sales/${props.id}`);
+            await axios.delete(`/api/sales/${props.id}`, {
+                headers: createApiHeaders(),
+                withCredentials: true,
+            });
             router.visit("/sales");
         } catch (error) {
             console.error("Error deleting sale:", error);
@@ -309,6 +316,7 @@ const formatDateTime = (date) => {
 };
 
 const formatStatus = (status) => {
+    if (!status) return "Unknown";
     return status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ");
 };
 

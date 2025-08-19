@@ -342,16 +342,35 @@
                                 <!-- Tags -->
                                 <div>
                                     <InputLabel for="tags" value="Tags" />
-                                    <TextInput
-                                        id="tags"
-                                        v-model="form.tags"
-                                        type="text"
-                                        class="mt-1 block w-full"
-                                        placeholder="Enter tags separated by commas"
-                                        :class="{
-                                            'border-red-500': form.errors.tags,
-                                        }"
-                                    />
+                                    <div class="mt-1">
+                                        <input
+                                            type="text"
+                                            v-model="tagInput"
+                                            @keyup.enter="addTag"
+                                            @keyup.space="addTag"
+                                            @keyup.188="addTag"
+                                            placeholder="Type a tag and press Enter or comma"
+                                            class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        />
+                                        <div class="mt-2 flex flex-wrap gap-2">
+                                            <span
+                                                v-for="(
+                                                    tag, index
+                                                ) in form.tags"
+                                                :key="index"
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                                            >
+                                                {{ tag }}
+                                                <button
+                                                    type="button"
+                                                    @click="removeTag(index)"
+                                                    class="ml-1 text-indigo-600 hover:text-indigo-800"
+                                                >
+                                                    ×
+                                                </button>
+                                            </span>
+                                        </div>
+                                    </div>
                                     <InputError
                                         :message="form.errors.tags"
                                         class="mt-2"
