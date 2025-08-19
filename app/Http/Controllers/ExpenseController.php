@@ -6,6 +6,7 @@ use App\Models\Expense;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 
 class ExpenseController extends Controller
 {
@@ -16,19 +17,15 @@ class ExpenseController extends Controller
     {
         Gate::authorize('viewAny', Expense::class);
 
-        $query = Expense::with(['user', 'category']);
+        $query = Expense::with(['user']);
 
         // Apply filters
         if ($request->has('search')) {
             $search = $request->get('search');
             $query->where(function ($q) use ($search) {
                 $q->where('description', 'like', "%{$search}%")
-                  ->orWhere('merchant', 'like', "%{$search}%");
+                    ->orWhere('category', 'like', "%{$search}%");
             });
-        }
-
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->get('category_id'));
         }
 
         if ($request->has('status')) {
@@ -43,23 +40,52 @@ class ExpenseController extends Controller
             $query->whereDate('expense_date', '<=', $request->get('date_to'));
         }
 
-        if ($request->has('min_amount')) {
-            $query->where('amount', '>=', $request->get('min_amount'));
-        }
-
-        if ($request->has('max_amount')) {
-            $query->where('amount', '<=', $request->get('max_amount'));
-        }
-
         // Role-based filtering
-        if (Auth::user()->hasRole('virtual_assistant')) {
+        if (Auth::user()->role === 'va') {
             $query->where('user_id', Auth::id());
         }
 
-        $expenses = $query->orderBy('expense_date', 'desc')
-                         ->paginate($request->get('per_page', 15));
+        $expenses = $query->orderBy('created_at', 'desc')
+            ->paginate($request->get('per_page', 15));
 
-        return response()->json($expenses);
+        // Format the expenses data to match frontend expectations
+        $expenses->getCollection()->transform(function ($expense) {
+            return [
+                'id' => $expense->id,
+                'description' => $expense->description,
+                'category' => $expense->category,
+                'amount' => $expense->amount,
+                'expense_date' => $expense->expense_date,
+                'status' => $expense->status,
+                'payment_method' => $expense->payment_method,
+                'merchant' => $expense->merchant,
+                'receipt_number' => $expense->receipt_number,
+                'tax_amount' => $expense->tax_amount,
+                'notes' => $expense->notes,
+                'user' => $expense->user ? [
+                    'id' => $expense->user->id,
+                    'name' => $expense->user->first_name . ' ' . $expense->user->last_name,
+                    'email' => $expense->user->email,
+                ] : null,
+                'created_at' => $expense->created_at,
+                'updated_at' => $expense->updated_at,
+            ];
+        });
+
+        return Inertia::render('Expenses/Index', [
+            'expenses' => $expenses,
+            'filters' => $request->only(['search', 'status', 'date_from', 'date_to', 'min_amount', 'max_amount'])
+        ]);
+    }
+
+    /**
+     * Show the form for creating a new expense.
+     */
+    public function create()
+    {
+        Gate::authorize('create', Expense::class);
+
+        return Inertia::render('Expenses/Create');
     }
 
     /**
@@ -70,28 +96,24 @@ class ExpenseController extends Controller
         Gate::authorize('create', Expense::class);
 
         $validated = $request->validate([
-            'category_id' => 'required|exists:categories,id',
             'description' => 'required|string|max:255',
             'amount' => 'required|numeric|min:0',
             'expense_date' => 'required|date',
-            'merchant' => 'nullable|string|max:255',
+            'category' => 'required|string|max:255',
+            'status' => 'required|in:pending,paid,cancelled',
             'payment_method' => 'required|in:cash,card,online,bank_transfer',
-            'receipt_number' => 'nullable|string|max:100',
+            'merchant' => 'nullable|string|max:255',
+            'receipt_number' => 'nullable|string|max:255',
             'tax_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
-            'is_recurring' => 'boolean',
-            'recurring_frequency' => 'nullable|in:daily,weekly,monthly,yearly|required_if:is_recurring,true',
-            'status' => 'required|in:pending,approved,rejected',
         ]);
 
         $validated['user_id'] = Auth::id();
 
         $expense = Expense::create($validated);
 
-        return response()->json([
-            'message' => 'Expense created successfully',
-            'data' => $expense->load(['user', 'category'])
-        ], 201);
+        return redirect()->route('expenses.index')
+            ->with('success', 'Expense created successfully');
     }
 
     /**
@@ -101,7 +123,21 @@ class ExpenseController extends Controller
     {
         Gate::authorize('view', $expense);
 
-        return response()->json($expense->load(['user', 'category']));
+        return Inertia::render('Expenses/Show', [
+            'expense' => $expense->load(['user'])
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified expense.
+     */
+    public function edit(Expense $expense)
+    {
+        Gate::authorize('update', $expense);
+
+        return Inertia::render('Expenses/Edit', [
+            'expense' => $expense->load(['user'])
+        ]);
     }
 
     /**
@@ -112,26 +148,22 @@ class ExpenseController extends Controller
         Gate::authorize('update', $expense);
 
         $validated = $request->validate([
-            'category_id' => 'sometimes|required|exists:categories,id',
             'description' => 'sometimes|required|string|max:255',
             'amount' => 'sometimes|required|numeric|min:0',
             'expense_date' => 'sometimes|required|date',
-            'merchant' => 'nullable|string|max:255',
+            'category' => 'sometimes|required|string|max:255',
+            'status' => 'sometimes|required|in:pending,paid,cancelled',
             'payment_method' => 'sometimes|required|in:cash,card,online,bank_transfer',
-            'receipt_number' => 'nullable|string|max:100',
+            'merchant' => 'nullable|string|max:255',
+            'receipt_number' => 'nullable|string|max:255',
             'tax_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
-            'is_recurring' => 'boolean',
-            'recurring_frequency' => 'nullable|in:daily,weekly,monthly,yearly|required_if:is_recurring,true',
-            'status' => 'sometimes|required|in:pending,approved,rejected',
         ]);
 
         $expense->update($validated);
 
-        return response()->json([
-            'message' => 'Expense updated successfully',
-            'data' => $expense->load(['user', 'category'])
-        ]);
+        return redirect()->route('expenses.index')
+            ->with('success', 'Expense updated successfully');
     }
 
     /**
@@ -143,13 +175,12 @@ class ExpenseController extends Controller
 
         $expense->delete();
 
-        return response()->json([
-            'message' => 'Expense deleted successfully'
-        ], 204);
+        return redirect()->route('expenses.index')
+            ->with('success', 'Expense deleted successfully');
     }
 
     /**
-     * Get expense statistics
+     * Get expenses statistics
      */
     public function statistics(Request $request)
     {
@@ -158,7 +189,7 @@ class ExpenseController extends Controller
         $query = Expense::query();
 
         // Role-based filtering
-        if (Auth::user()->hasRole('virtual_assistant')) {
+        if (Auth::user()->role === 'va') {
             $query->where('user_id', Auth::id());
         }
 
@@ -167,21 +198,17 @@ class ExpenseController extends Controller
         $averageExpense = $totalCount > 0 ? $totalExpenses / $totalCount : 0;
 
         $monthlyExpenses = $query->selectRaw('SUM(amount) as total, MONTH(expense_date) as month')
-                                ->whereYear('expense_date', date('Y'))
-                                ->groupBy('month')
-                                ->pluck('total', 'month');
+            ->whereYear('expense_date', date('Y'))
+            ->groupBy('month')
+            ->pluck('total', 'month');
 
-        $expensesByCategory = $query->selectRaw('categories.name as category, SUM(expenses.amount) as total')
-                                   ->join('categories', 'expenses.category_id', '=', 'categories.id')
-                                   ->groupBy('categories.id', 'categories.name')
-                                   ->pluck('total', 'category');
-
-        return response()->json([
-            'total_expenses' => $totalExpenses,
-            'total_count' => $totalCount,
-            'average_expense' => $averageExpense,
-            'monthly_expenses' => $monthlyExpenses,
-            'expenses_by_category' => $expensesByCategory
+        return Inertia::render('Expenses/Statistics', [
+            'statistics' => [
+                'total_expenses' => $totalExpenses,
+                'total_count' => $totalCount,
+                'average_expense' => $averageExpense,
+                'monthly_expenses' => $monthlyExpenses
+            ]
         ]);
     }
 }

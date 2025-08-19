@@ -18,12 +18,17 @@ class Goal extends Model
         'quarter',
         'year',
         'deadline',
+        'type',
+        'priority',
+        'status',
+        'progress',
     ];
 
     protected $casts = [
         'target_value' => 'decimal:2',
         'current_value' => 'decimal:2',
         'deadline' => 'date',
+        'progress' => 'decimal:2',
     ];
 
     public function user()
@@ -36,7 +41,7 @@ class Goal extends Model
         if ($this->target_value <= 0) {
             return 0;
         }
-        
+
         return min(100, round(($this->current_value / $this->target_value) * 100, 2));
     }
 }

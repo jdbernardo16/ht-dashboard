@@ -13,13 +13,22 @@ class Expense extends Model
         'user_id',
         'category',
         'amount',
-        'date',
+        'expense_date',
         'description',
+        'status',
+        'payment_method',
+        'merchant',
+        'receipt_number',
+        'tax_amount',
+        'notes',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
-        'date' => 'date',
+        'tax_amount' => 'decimal:2',
+        'expense_date' => 'date',
+        'status' => 'string',
+        'payment_method' => 'string',
     ];
 
     public function user()

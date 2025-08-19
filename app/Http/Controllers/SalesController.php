@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sale;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 
 class SalesController extends Controller
 {
@@ -23,7 +25,7 @@ class SalesController extends Controller
             $search = $request->get('search');
             $query->where(function ($q) use ($search) {
                 $q->where('product_name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
@@ -40,14 +42,56 @@ class SalesController extends Controller
         }
 
         // Role-based filtering
-        if (Auth::user()->hasRole('virtual_assistant')) {
+        if (Auth::user()->role === 'va') {
             $query->where('user_id', Auth::id());
         }
 
         $sales = $query->orderBy('created_at', 'desc')
-                      ->paginate($request->get('per_page', 15));
+            ->paginate($request->get('per_page', 15));
 
-        return response()->json($sales);
+        // Format the sales data to match frontend expectations
+        $sales->getCollection()->transform(function ($sale) {
+            return [
+                'id' => $sale->id,
+                'product_name' => $sale->product_name,
+                'client' => $sale->client ? [
+                    'id' => $sale->client->id,
+                    'name' => $sale->client->first_name . ' ' . $sale->client->last_name,
+                    'email' => $sale->client->email,
+                ] : null,
+                'amount' => $sale->amount,
+                'sale_date' => $sale->sale_date,
+                'status' => $sale->status,
+                'payment_method' => $sale->payment_method,
+                'description' => $sale->description,
+                'type' => $sale->type,
+                'created_at' => $sale->created_at,
+                'updated_at' => $sale->updated_at,
+            ];
+        });
+
+        return Inertia::render('Sales/Index', [
+            'sales' => $sales,
+            'filters' => $request->only(['search', 'status', 'date_from', 'date_to', 'min_amount', 'max_amount'])
+        ]);
+    }
+
+    /**
+     * Show the form for creating a new sale.
+     */
+    public function create()
+    {
+        Gate::authorize('create', Sale::class);
+
+        $clients = User::where('role', 'client')
+            ->select('id', 'first_name', 'last_name', 'email')
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get();
+
+        return Inertia::render('Sales/Create', [
+            'clients' => $clients
+        ]);
     }
 
     /**
@@ -69,13 +113,25 @@ class SalesController extends Controller
         ]);
 
         $validated['user_id'] = Auth::id();
+        $validated['type'] = 'Cards'; // Default type, adjust as needed
 
-        $sale = Sale::create($validated);
+        // Map form fields to database columns
+        $saleData = [
+            'user_id' => $validated['user_id'],
+            'client_id' => $validated['client_id'],
+            'type' => $validated['type'],
+            'product_name' => $validated['product_name'],
+            'amount' => $validated['amount'],
+            'sale_date' => $validated['sale_date'],
+            'description' => $validated['description'] ?? null,
+            'status' => $validated['status'],
+            'payment_method' => $validated['payment_method'],
+        ];
 
-        return response()->json([
-            'message' => 'Sale created successfully',
-            'data' => $sale->load(['user', 'client'])
-        ], 201);
+        $sale = Sale::create($saleData);
+
+        return redirect()->route('sales.index')
+            ->with('success', 'Sale created successfully');
     }
 
     /**
@@ -85,7 +141,35 @@ class SalesController extends Controller
     {
         Gate::authorize('view', $sale);
 
-        return response()->json($sale->load(['user', 'client']));
+        return Inertia::render('Sales/Show', [
+            'sale' => $sale->load(['user', 'client'])
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified sale.
+     */
+    public function edit(Sale $sale)
+    {
+        Gate::authorize('update', $sale);
+
+        $clients = User::where('role', 'client')
+            ->select('id', 'first_name', 'last_name', 'email')
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->get()
+            ->map(function ($client) {
+                return [
+                    'id' => $client->id,
+                    'name' => $client->first_name . ' ' . $client->last_name,
+                    'email' => $client->email
+                ];
+            });
+
+        return Inertia::render('Sales/Edit', [
+            'sale' => $sale->load(['user', 'client']),
+            'clients' => $clients
+        ]);
     }
 
     /**
@@ -108,10 +192,8 @@ class SalesController extends Controller
 
         $sale->update($validated);
 
-        return response()->json([
-            'message' => 'Sale updated successfully',
-            'data' => $sale->load(['user', 'client'])
-        ]);
+        return redirect()->route('sales.index')
+            ->with('success', 'Sale updated successfully');
     }
 
     /**
@@ -123,9 +205,8 @@ class SalesController extends Controller
 
         $sale->delete();
 
-        return response()->json([
-            'message' => 'Sale deleted successfully'
-        ], 204);
+        return redirect()->route('sales.index')
+            ->with('success', 'Sale deleted successfully');
     }
 
     /**
@@ -138,7 +219,7 @@ class SalesController extends Controller
         $query = Sale::query();
 
         // Role-based filtering
-        if (Auth::user()->hasRole('virtual_assistant')) {
+        if (Auth::user()->role === 'va') {
             $query->where('user_id', Auth::id());
         }
 
@@ -147,15 +228,17 @@ class SalesController extends Controller
         $averageSale = $totalCount > 0 ? $totalSales / $totalCount : 0;
 
         $monthlySales = $query->selectRaw('SUM(amount) as total, MONTH(sale_date) as month')
-                             ->whereYear('sale_date', date('Y'))
-                             ->groupBy('month')
-                             ->pluck('total', 'month');
+            ->whereYear('sale_date', date('Y'))
+            ->groupBy('month')
+            ->pluck('total', 'month');
 
-        return response()->json([
-            'total_sales' => $totalSales,
-            'total_count' => $totalCount,
-            'average_sale' => $averageSale,
-            'monthly_sales' => $monthlySales
+        return Inertia::render('Sales/Statistics', [
+            'statistics' => [
+                'total_sales' => $totalSales,
+                'total_count' => $totalCount,
+                'average_sale' => $averageSale,
+                'monthly_sales' => $monthlySales
+            ]
         ]);
     }
 }

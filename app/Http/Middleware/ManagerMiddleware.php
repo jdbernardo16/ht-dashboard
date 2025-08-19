@@ -15,8 +15,9 @@ class ManagerMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!auth()->check() || !auth()->user()->isManager()) {
-            abort(403, 'Unauthorized access. Manager privileges required.');
+        $user = $request->user();
+        if (!$user || !$user->hasRole(['manager', 'admin'])) {
+            abort(403, 'Unauthorized access. Manager or Admin privileges required.');
         }
 
         return $next($request);

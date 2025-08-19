@@ -255,7 +255,7 @@ const fetchGoals = () => {
     router.get("/goals", filters.value, {
         preserveState: true,
         onSuccess: (page) => {
-            goals.value = page.props.goals;
+            goals.value = page.props.goals.data || page.props.goals;
             loading.value = false;
         },
         onError: (errors) => {
@@ -266,30 +266,11 @@ const fetchGoals = () => {
 };
 
 const createGoal = () => {
-    isEdit.value = false;
-    form.value = {
-        title: "",
-        description: "",
-        type: "other",
-        target_value: 0,
-        current_value: 0,
-        target_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0],
-        priority: "medium",
-        status: "not_started",
-        category: "",
-        notes: "",
-        is_recurring: false,
-        recurring_frequency: "",
-    };
-    showModal.value = true;
+    router.visit("/goals/create");
 };
 
 const editGoal = (goal) => {
-    isEdit.value = true;
-    form.value = { ...goal };
-    showModal.value = true;
+    router.visit(`/goals/${sale.id}/edit`);
 };
 
 const viewGoal = (goal) => {

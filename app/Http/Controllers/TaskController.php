@@ -15,14 +15,6 @@ class TaskController extends Controller
      */
     public function index(Request $request)
     {
-        return $this->apiIndex($request);
-    }
-
-    /**
-     * API endpoint for tasks
-     */
-    public function apiIndex(Request $request)
-    {
         Gate::authorize('viewAny', Task::class);
 
         $query = Task::with(['user', 'assignedTo']);
@@ -32,7 +24,7 @@ class TaskController extends Controller
             $search = $request->get('search');
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
@@ -57,19 +49,27 @@ class TaskController extends Controller
         }
 
         // Role-based filtering
-        if (Auth::user()->hasRole('virtual_assistant')) {
+        if (Auth::user()->role === 'va') {
             $query->where(function ($q) {
                 $q->where('user_id', Auth::id())
-                  ->orWhere('assigned_to', Auth::id());
+                    ->orWhere('assigned_to', Auth::id());
             });
         }
 
         $tasks = $query->orderBy('priority', 'desc')
-                      ->orderBy('due_date', 'asc')
-                      ->paginate($request->get('per_page', 15));
+            ->orderBy('due_date', 'asc')
+            ->paginate($request->get('per_page', 15));
+
+        // Get users for dropdowns
+        $users = \App\Models\User::select('id', 'first_name', 'last_name')->orderBy('first_name')->get();
+
+        // Get goals for dropdowns
+        $goals = \App\Models\Goal::select('id', 'title')->orderBy('title')->get();
 
         return Inertia::render('Tasks/Index', [
             'tasks' => $tasks,
+            'users' => $users,
+            'goals' => $goals,
             'filters' => $request->only(['search', 'status', 'priority', 'assigned_to', 'date_from', 'date_to'])
         ]);
     }
@@ -111,6 +111,42 @@ class TaskController extends Controller
 
         return redirect()->route('tasks.index')->with('success', 'Task created successfully');
     }
+    /**
+     * Show the form for creating a new task.
+     */
+    public function create()
+    {
+        Gate::authorize('create', Task::class);
+
+        // Get users for dropdowns
+        $users = \App\Models\User::select('id', 'first_name', 'last_name', 'email')
+            ->orderBy('first_name')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->first_name . ' ' . $user->last_name,
+                    'email' => $user->email,
+                ];
+            });
+
+        // Get goals for dropdowns
+        $goals = \App\Models\Goal::select('id', 'title')
+            ->orderBy('title')
+            ->get();
+
+        // Get parent tasks for dropdown
+        $parentTasks = Task::select('id', 'title')
+            ->where('status', '!=', 'completed')
+            ->orderBy('title')
+            ->get();
+
+        return Inertia::render('Tasks/Create', [
+            'users' => $users,
+            'goals' => $goals,
+            'parentTasks' => $parentTasks,
+        ]);
+    }
 
     /**
      * Display the specified task.
@@ -121,6 +157,37 @@ class TaskController extends Controller
 
         return Inertia::render('Tasks/Show', [
             'task' => $task->load(['user', 'assignedTo'])
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified task.
+     */
+    public function edit(Task $task)
+    {
+        Gate::authorize('update', $task);
+
+        // Get users for dropdowns
+        $users = \App\Models\User::select('id', 'first_name', 'last_name', 'email')
+            ->orderBy('first_name')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->first_name . ' ' . $user->last_name,
+                    'email' => $user->email,
+                ];
+            });
+
+        // Get goals for dropdowns
+        $goals = \App\Models\Goal::select('id', 'title')
+            ->orderBy('title')
+            ->get();
+
+        return Inertia::render('Tasks/Edit', [
+            'task' => $task,
+            'users' => $users,
+            'goals' => $goals,
         ]);
     }
 
@@ -200,10 +267,10 @@ class TaskController extends Controller
         $query = Task::query();
 
         // Role-based filtering
-        if (Auth::user()->hasRole('virtual_assistant')) {
+        if (Auth::user()->role === 'va') {
             $query->where(function ($q) {
                 $q->where('user_id', Auth::id())
-                  ->orWhere('assigned_to', Auth::id());
+                    ->orWhere('assigned_to', Auth::id());
             });
         }
 
@@ -213,13 +280,13 @@ class TaskController extends Controller
         $inProgressTasks = $query->clone()->where('status', 'in_progress')->count();
 
         $tasksByPriority = $query->selectRaw('priority, COUNT(*) as count')
-                               ->groupBy('priority')
-                               ->pluck('count', 'priority');
+            ->groupBy('priority')
+            ->pluck('count', 'priority');
 
         $overdueTasks = $query->clone()
-                            ->where('due_date', '<', now())
-                            ->whereIn('status', ['pending', 'in_progress'])
-                            ->count();
+            ->where('due_date', '<', now())
+            ->whereIn('status', ['pending', 'in_progress'])
+            ->count();
 
         $totalEstimatedHours = $query->sum('estimated_hours');
         $totalActualHours = $query->sum('actual_hours');
@@ -244,7 +311,7 @@ class TaskController extends Controller
     public function myTasks(Request $request)
     {
         $query = Task::with(['user', 'assignedTo'])
-                    ->where('assigned_to', Auth::id());
+            ->where('assigned_to', Auth::id());
 
         if ($request->has('status')) {
             $query->where('status', $request->get('status'));
@@ -255,8 +322,8 @@ class TaskController extends Controller
         }
 
         $tasks = $query->orderBy('priority', 'desc')
-                      ->orderBy('due_date', 'asc')
-                      ->paginate($request->get('per_page', 15));
+            ->orderBy('due_date', 'asc')
+            ->paginate($request->get('per_page', 15));
 
         return Inertia::render('Tasks/MyTasks', [
             'tasks' => $tasks,

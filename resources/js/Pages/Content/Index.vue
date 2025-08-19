@@ -11,9 +11,16 @@
                 <!-- Search and Filter Bar -->
                 <SearchFilter
                     v-model="filters"
-                    :filters="['search', 'status', 'type', 'date']"
+                    :filters="[
+                        'search',
+                        'status',
+                        'content_type',
+                        'platform',
+                        'date',
+                    ]"
                     :status-options="statusOptions"
                     :type-options="typeOptions"
+                    :platform-options="platformOptions"
                     @apply="applyFilters"
                     @clear="clearFilters"
                 />
@@ -34,12 +41,12 @@
                         </div>
                     </template>
 
-                    <template #type="{ item }">
+                    <template #content_type="{ item }">
                         <span
-                            :class="getTypeClass(item.type)"
+                            :class="getTypeClass(item.content_type)"
                             class="px-2 py-1 text-xs font-medium rounded-full"
                         >
-                            {{ formatType(item.type) }}
+                            {{ formatType(item.content_type) }}
                         </span>
                     </template>
 
@@ -52,10 +59,10 @@
                         </span>
                     </template>
 
-                    <template #scheduled_at="{ item }">
+                    <template #scheduled_date="{ item }">
                         {{
-                            item.scheduled_at
-                                ? formatDate(item.scheduled_at)
+                            item.scheduled_date
+                                ? formatDate(item.scheduled_date)
                                 : "N/A"
                         }}
                     </template>
@@ -90,28 +97,43 @@ import FormModal from "@/Components/FormModal.vue";
 import SearchFilter from "@/Components/SearchFilter.vue";
 import axios from "axios";
 
+// Props from controller
+const props = defineProps({
+    contentPosts: {
+        type: Object,
+        required: true,
+    },
+    filters: {
+        type: Object,
+        default: () => ({}),
+    },
+});
+
 // Reactive data
-const posts = ref([]);
 const categories = ref([]);
 const loading = ref(false);
 const showModal = ref(false);
 const isEdit = ref(false);
 const form = ref({});
 const filters = ref({
-    search: "",
-    status: "",
-    type: "",
-    date_from: "",
-    date_to: "",
+    search: props.filters.search || "",
+    status: props.filters.status || "",
+    content_type: props.filters.content_type || "",
+    platform: props.filters.platform || "",
+    date_from: props.filters.date_from || "",
+    date_to: props.filters.date_to || "",
 });
+
+// Use props data instead of fetching
+const posts = computed(() => props.contentPosts.data || []);
 
 // Table columns
 const columns = [
     { key: "id", label: "ID", sortable: true },
     { key: "title", label: "Title", sortable: true },
-    { key: "type", label: "Type", sortable: true },
+    { key: "content_type", label: "Type", sortable: true },
     { key: "status", label: "Status", sortable: true },
-    { key: "scheduled_at", label: "Scheduled", type: "date", sortable: true },
+    { key: "scheduled_date", label: "Scheduled", type: "date", sortable: true },
     { key: "user", label: "Author", sortable: true },
 ];
 
@@ -128,6 +150,18 @@ const typeOptions = [
     { value: "social_media", label: "Social Media" },
     { value: "email", label: "Email" },
     { value: "newsletter", label: "Newsletter" },
+];
+
+// Platform options
+const platformOptions = [
+    { value: "facebook", label: "Facebook" },
+    { value: "instagram", label: "Instagram" },
+    { value: "twitter", label: "Twitter" },
+    { value: "linkedin", label: "LinkedIn" },
+    { value: "youtube", label: "YouTube" },
+    { value: "tiktok", label: "TikTok" },
+    { value: "website", label: "Website" },
+    { value: "other", label: "Other" },
 ];
 
 // Form fields
@@ -198,21 +232,20 @@ const tableFilters = [
 ];
 
 // Methods
-const fetchPosts = async () => {
-    loading.value = true;
-    try {
-        const params = new URLSearchParams();
-        Object.keys(filters.value).forEach((key) => {
-            if (filters.value[key]) params.append(key, filters.value[key]);
-        });
+const applyFilters = () => {
+    const params = {};
+    Object.keys(filters.value).forEach((key) => {
+        if (filters.value[key]) params[key] = filters.value[key];
+    });
 
-        const response = await axios.get(`/api/content-posts?${params}`);
-        posts.value = response.data.data;
-    } catch (error) {
-        console.error("Error fetching posts:", error);
-    } finally {
-        loading.value = false;
-    }
+    router.get("/content", params, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ["contentPosts", "filters"],
+        onError: (errors) => {
+            console.error("Error fetching content:", errors);
+        },
+    });
 };
 
 const fetchCategories = async () => {
@@ -233,31 +266,11 @@ const fetchCategories = async () => {
 };
 
 const createPost = () => {
-    isEdit.value = false;
-    form.value = {
-        title: "",
-        content: "",
-        type: "blog",
-        status: "draft",
-        category_id: "",
-        scheduled_at: "",
-        tags: "",
-        meta_description: "",
-        seo_keywords: "",
-    };
-    showModal.value = true;
+    router.visit("/content/create");
 };
 
 const editPost = (post) => {
-    isEdit.value = true;
-    form.value = {
-        ...post,
-        tags: Array.isArray(post.tags) ? post.tags.join(", ") : post.tags || "",
-        scheduled_at: post.scheduled_at
-            ? post.scheduled_at.replace(" ", "T")
-            : "",
-    };
-    showModal.value = true;
+    router.visit(`/content/${post.id}/edit`);
 };
 
 const viewPost = (post) => {
@@ -265,45 +278,13 @@ const viewPost = (post) => {
 };
 
 const deletePost = async (post) => {
-    if (confirm("Are you sure you want to delete this content?")) {
+    if (confirm("Are you sure you want to delete this content post?")) {
         try {
-            await axios.delete(`/api/content-posts/${post.id}`);
-            await fetchPosts();
+            await router.delete(`/content/${post.id}`);
+            router.reload({ only: ["contentPosts"] });
         } catch (error) {
-            console.error("Error deleting post:", error);
+            console.error("Error deleting content:", error);
         }
-    }
-};
-
-const handleSubmit = async (formData) => {
-    loading.value = true;
-    try {
-        // Handle tags conversion
-        if (formData.tags) {
-            formData.tags = formData.tags
-                .split(",")
-                .map((tag) => tag.trim())
-                .filter((tag) => tag);
-        }
-
-        if (isEdit.value) {
-            await axios.put(`/api/content-posts/${form.value.id}`, formData);
-        } else {
-            await axios.post("/api/content-posts", formData);
-        }
-        await fetchPosts();
-        closeModal();
-    } catch (error) {
-        if (error.response?.status === 422) {
-            const validationErrors = error.response.data.errors;
-            if (formModal.value) {
-                formModal.value.setErrors(validationErrors);
-            }
-        } else {
-            console.error("Error saving post:", error);
-        }
-    } finally {
-        loading.value = false;
     }
 };
 
@@ -315,19 +296,16 @@ const closeModal = () => {
     }
 };
 
-const applyFilters = () => {
-    fetchPosts();
-};
-
 const clearFilters = () => {
     filters.value = {
         search: "",
         status: "",
-        type: "",
+        content_type: "",
+        platform: "",
         date_from: "",
         date_to: "",
     };
-    fetchPosts();
+    applyFilters();
 };
 
 // Utility functions
@@ -364,7 +342,6 @@ const getTypeClass = (type) => {
 
 // Lifecycle
 onMounted(() => {
-    fetchPosts();
     fetchCategories();
 });
 </script>

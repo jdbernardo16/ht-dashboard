@@ -22,6 +22,7 @@
                     :data="sales"
                     :columns="columns"
                     :filters="tableFilters"
+                    :loading="loading"
                     @create="createSale"
                     @view="viewSale"
                     @edit="editSale"
@@ -50,47 +51,53 @@
                         {{ item.client?.name || "N/A" }}
                     </template>
                 </DataTable>
+
+                <!-- Pagination -->
+                <div class="mt-4">
+                    <Pagination :links="paginationLinks" />
+                </div>
             </div>
         </div>
-
-        <!-- Create/Edit Modal -->
-        <FormModal
-            :show="showModal"
-            :title="isEdit ? 'Edit Sale' : 'Create New Sale'"
-            :fields="formFields"
-            :initial-data="form"
-            :loading="loading"
-            @close="closeModal"
-            @submit="handleSubmit"
-            ref="formModal"
-        />
     </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { router } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import DataTable from "@/Components/DataTable.vue";
-import FormModal from "@/Components/FormModal.vue";
 import SearchFilter from "@/Components/SearchFilter.vue";
-import axios from "axios";
+
+// Props from server
+const props = defineProps({
+    sales: {
+        type: Object,
+        required: true,
+    },
+    clients: {
+        type: Array,
+        default: () => [],
+    },
+    filters: {
+        type: Object,
+        default: () => ({}),
+    },
+});
 
 // Reactive data
-const sales = ref([]);
-const clients = ref([]);
 const loading = ref(false);
-const showModal = ref(false);
-const isEdit = ref(false);
-const form = ref({});
 const filters = ref({
-    search: "",
-    status: "",
-    date_from: "",
-    date_to: "",
-    min_amount: "",
-    max_amount: "",
+    search: props.filters.search || "",
+    status: props.filters.status || "",
+    date_from: props.filters.date_from || "",
+    date_to: props.filters.date_to || "",
+    min_amount: props.filters.min_amount || "",
+    max_amount: props.filters.max_amount || "",
 });
+
+// Computed properties
+const sales = computed(() => props.sales.data || []);
+const paginationLinks = computed(() => props.sales.links || []);
 
 // Table columns
 const columns = [
@@ -110,57 +117,6 @@ const statusOptions = [
     { value: "cancelled", label: "Cancelled" },
 ];
 
-// Form fields
-const formFields = [
-    {
-        name: "client_id",
-        label: "Client",
-        type: "select",
-        required: true,
-        options: [],
-    },
-    {
-        name: "product_name",
-        label: "Product Name",
-        type: "text",
-        required: true,
-    },
-    {
-        name: "description",
-        label: "Description",
-        type: "textarea",
-        required: false,
-    },
-    {
-        name: "amount",
-        label: "Amount",
-        type: "number",
-        required: true,
-        min: 0,
-        step: 0.01,
-    },
-    { name: "sale_date", label: "Sale Date", type: "date", required: true },
-    {
-        name: "status",
-        label: "Status",
-        type: "select",
-        required: true,
-        options: statusOptions,
-    },
-    {
-        name: "payment_method",
-        label: "Payment Method",
-        type: "select",
-        required: true,
-        options: [
-            { value: "cash", label: "Cash" },
-            { value: "card", label: "Card" },
-            { value: "online", label: "Online" },
-        ],
-    },
-    { name: "notes", label: "Notes", type: "textarea", required: false },
-];
-
 // Table filters
 const tableFilters = [
     { value: "pending", label: "Pending" },
@@ -169,59 +125,12 @@ const tableFilters = [
 ];
 
 // Methods
-const fetchSales = async () => {
-    loading.value = true;
-    try {
-        const params = new URLSearchParams();
-        Object.keys(filters.value).forEach((key) => {
-            if (filters.value[key]) params.append(key, filters.value[key]);
-        });
-
-        const response = await axios.get(`/api/sales?${params}`);
-        sales.value = response.data.data;
-    } catch (error) {
-        console.error("Error fetching sales:", error);
-    } finally {
-        loading.value = false;
-    }
-};
-
-const fetchClients = async () => {
-    try {
-        const response = await axios.get("/api/users?role=client");
-        clients.value = response.data.data;
-        // Update form fields with clients
-        const clientField = formFields.find((f) => f.name === "client_id");
-        if (clientField) {
-            clientField.options = clients.value.map((client) => ({
-                value: client.id,
-                label: client.name,
-            }));
-        }
-    } catch (error) {
-        console.error("Error fetching clients:", error);
-    }
-};
-
 const createSale = () => {
-    isEdit.value = false;
-    form.value = {
-        client_id: "",
-        product_name: "",
-        description: "",
-        amount: 0,
-        sale_date: new Date().toISOString().split("T")[0],
-        status: "pending",
-        payment_method: "cash",
-        notes: "",
-    };
-    showModal.value = true;
+    router.visit("/sales/create");
 };
 
 const editSale = (sale) => {
-    isEdit.value = true;
-    form.value = { ...sale };
-    showModal.value = true;
+    router.visit(`/sales/${sale.id}/edit`);
 };
 
 const viewSale = (sale) => {
@@ -231,49 +140,50 @@ const viewSale = (sale) => {
 const deleteSale = async (sale) => {
     if (confirm("Are you sure you want to delete this sale?")) {
         try {
-            await axios.delete(`/api/sales/${sale.id}`);
-            await fetchSales();
+            loading.value = true;
+            await router.delete(`/sales/${sale.id}`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    // The page will automatically refresh with new data
+                },
+                onError: (errors) => {
+                    console.error("Error deleting sale:", errors);
+                    if (errors.message?.includes("403")) {
+                        alert("You don't have permission to delete this sale.");
+                    }
+                },
+                onFinish: () => {
+                    loading.value = false;
+                },
+            });
         } catch (error) {
+            loading.value = false;
             console.error("Error deleting sale:", error);
         }
     }
 };
 
-const handleSubmit = async (formData) => {
-    loading.value = true;
-    try {
-        if (isEdit.value) {
-            await axios.put(`/api/sales/${form.value.id}`, formData);
-        } else {
-            await axios.post("/api/sales", formData);
-        }
-        await fetchSales();
-        closeModal();
-    } catch (error) {
-        if (error.response?.status === 422) {
-            // Validation errors
-            const validationErrors = error.response.data.errors;
-            if (formModal.value) {
-                formModal.value.setErrors(validationErrors);
-            }
-        } else {
-            console.error("Error saving sale:", error);
-        }
-    } finally {
-        loading.value = false;
-    }
-};
-
-const closeModal = () => {
-    showModal.value = false;
-    form.value = {};
-    if (formModal.value) {
-        formModal.value.resetForm();
-    }
-};
-
 const applyFilters = () => {
-    fetchSales();
+    loading.value = true;
+    const params = {};
+    Object.keys(filters.value).forEach((key) => {
+        if (filters.value[key]) params[key] = filters.value[key];
+    });
+
+    router.get("/sales", params, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ["sales", "filters"],
+        onError: (errors) => {
+            console.error("Error applying filters:", errors);
+            if (errors.message?.includes("403")) {
+                alert("You don't have permission to view sales.");
+            }
+        },
+        onFinish: () => {
+            loading.value = false;
+        },
+    });
 };
 
 const clearFilters = () => {
@@ -285,7 +195,7 @@ const clearFilters = () => {
         min_amount: "",
         max_amount: "",
     };
-    fetchSales();
+    applyFilters();
 };
 
 // Utility functions
@@ -298,6 +208,7 @@ const formatDate = (date) => {
 };
 
 const formatStatus = (status) => {
+    if (!status) return "";
     return status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ");
 };
 
@@ -310,9 +221,20 @@ const getStatusClass = (status) => {
     return classes[status] || "bg-gray-100 text-gray-800";
 };
 
+// Watch for filter changes
+watch(
+    filters,
+    () => {
+        clearTimeout(window.filterTimeout);
+        window.filterTimeout = setTimeout(() => {
+            applyFilters();
+        }, 300);
+    },
+    { deep: true }
+);
+
 // Lifecycle
 onMounted(() => {
-    fetchSales();
-    fetchClients();
+    // Initialize any required data
 });
 </script>
