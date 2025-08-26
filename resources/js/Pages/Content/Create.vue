@@ -68,27 +68,33 @@
                             <!-- Platform -->
                             <div>
                                 <label
-                                    for="platform"
-                                    class="block text-sm font-medium text-gray-700"
+                                    class="block text-sm font-medium text-gray-700 mb-2"
                                 >
-                                    Platform *
+                                    Platforms *
                                 </label>
-                                <select
-                                    id="platform"
-                                    v-model="form.platform"
-                                    required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                <div
+                                    class="grid grid-cols-2 md:grid-cols-3 gap-3"
                                 >
-                                    <option value="">Select a platform</option>
-                                    <option value="facebook">Facebook</option>
-                                    <option value="instagram">Instagram</option>
-                                    <option value="twitter">Twitter</option>
-                                    <option value="linkedin">LinkedIn</option>
-                                    <option value="tiktok">TikTok</option>
-                                    <option value="youtube">YouTube</option>
-                                    <option value="pinterest">Pinterest</option>
-                                    <option value="other">Other</option>
-                                </select>
+                                    <div
+                                        v-for="platformOption in platformOptions"
+                                        :key="platformOption.value"
+                                        class="flex items-center"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            :id="`platform-${platformOption.value}`"
+                                            :value="platformOption.value"
+                                            v-model="form.platform"
+                                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                        />
+                                        <label
+                                            :for="`platform-${platformOption.value}`"
+                                            class="ml-2 text-sm text-gray-700"
+                                        >
+                                            {{ platformOption.label }}
+                                        </label>
+                                    </div>
+                                </div>
                                 <p
                                     v-if="errors.platform"
                                     class="mt-1 text-sm text-red-600"
@@ -336,6 +342,31 @@
                                 </p>
                             </div>
 
+                            <!-- Media Upload -->
+                            <div>
+                                <InputLabel value="Upload Files" class="mb-2" />
+                                <FileUpload
+                                    v-model="form.media"
+                                    :multiple="true"
+                                    accept="image/*,.pdf,.doc,.docx,.txt"
+                                    :maxFiles="10"
+                                    :maxSize="10 * 1024 * 1024"
+                                    title="Drag & drop files here or click to browse"
+                                    description="Supports images, PDFs, and documents (max 10MB each)"
+                                    @error="handleFileError"
+                                />
+                                <p class="text-xs text-gray-500 mt-2">
+                                    You can upload up to 10 files. Supported
+                                    formats: JPG, PNG, GIF, PDF, DOC, DOCX, TXT.
+                                </p>
+                                <p
+                                    v-if="errors.media"
+                                    class="mt-1 text-sm text-red-600"
+                                >
+                                    {{ errors.media }}
+                                </p>
+                            </div>
+
                             <!-- Submit Buttons -->
                             <div
                                 class="flex items-center justify-end space-x-3"
@@ -373,6 +404,7 @@ import { router, useForm } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
+import FileUpload from "@/Components/UI/FileUpload.vue";
 
 const props = defineProps({
     clients: {
@@ -384,10 +416,23 @@ const props = defineProps({
 const loading = ref(false);
 const errors = ref({});
 
+const platformOptions = [
+    { value: "website", label: "Website" },
+    { value: "facebook", label: "Facebook" },
+    { value: "instagram", label: "Instagram" },
+    { value: "twitter", label: "Twitter" },
+    { value: "linkedin", label: "LinkedIn" },
+    { value: "tiktok", label: "TikTok" },
+    { value: "youtube", label: "YouTube" },
+    { value: "pinterest", label: "Pinterest" },
+    { value: "email", label: "Email" },
+    { value: "other", label: "Other" },
+];
+
 const form = useForm({
     client_id: "",
     title: "",
-    platform: "",
+    platform: [],
     content_type: "",
     description: "",
     content_url: "",
@@ -398,7 +443,12 @@ const form = useForm({
     content_category: "",
     tags: "",
     notes: "",
+    media: [],
 });
+
+const handleFileError = (error) => {
+    errors.value.media = error;
+};
 
 const submitForm = () => {
     loading.value = true;
@@ -412,11 +462,37 @@ const submitForm = () => {
               .filter((tag) => tag)
         : [];
 
-    // Transform the form data
-    form.transform((data) => ({
-        ...data,
-        tags: tagsArray,
-    })).post(route("content.store"), {
+    // Convert File objects to FormData for proper file upload
+    const formData = new FormData();
+
+    // Add all form fields
+    Object.keys(form.data()).forEach((key) => {
+        if (key === "media") {
+            // Handle file uploads
+            form.media.forEach((file, index) => {
+                formData.append(`media[${index}]`, file);
+            });
+        } else if (Array.isArray(form[key])) {
+            // Handle arrays (like platform and tags)
+            form[key].forEach((item, index) => {
+                formData.append(`${key}[${index}]`, item);
+            });
+        } else {
+            formData.append(key, form[key]);
+        }
+    });
+
+    // Add tags array
+    tagsArray.forEach((tag, index) => {
+        formData.append(`tags[${index}]`, tag);
+    });
+
+    // Use FormData for the post request
+    form.post(route("content.store"), {
+        data: formData,
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
         onSuccess: () => {
             router.visit(route("content.index"));
         },

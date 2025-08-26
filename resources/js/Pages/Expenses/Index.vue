@@ -144,6 +144,7 @@ const categoryOptions = [
     { value: "Travel", label: "Travel" },
     { value: "Utilities", label: "Utilities" },
     { value: "Marketing", label: "Marketing" },
+    { value: "Inventory", label: "Inventory" },
 ];
 
 // Form fields
@@ -155,7 +156,13 @@ const formFields = [
         required: true,
         options: categoryOptions,
     },
-    { name: "description", label: "Description", type: "text", required: true },
+    { name: "title", label: "Title", type: "text", required: true },
+    {
+        name: "description",
+        label: "Description",
+        type: "textarea",
+        required: true,
+    },
     {
         name: "amount",
         label: "Amount",

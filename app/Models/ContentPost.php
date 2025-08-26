@@ -35,9 +35,9 @@ class ContentPost extends Model
         'published_date' => 'date',
         'post_count' => 'integer',
         'engagement_metrics' => 'array',
+        'platform' => 'array',
         'tags' => 'array',
         'status' => 'string',
-        'platform' => 'string',
         'content_type' => 'string',
         'content_category' => 'string',
     ];
@@ -58,6 +58,22 @@ class ContentPost extends Model
     }
 
     /**
+     * Get all media files associated with this content post
+     */
+    public function media()
+    {
+        return $this->hasMany(ContentPostMedia::class);
+    }
+
+    /**
+     * Get the primary media file for this content post
+     */
+    public function primaryMedia()
+    {
+        return $this->hasOne(ContentPostMedia::class)->where('is_primary', true);
+    }
+
+    /**
      * Scope for filtering by status
      */
     public function scopeStatus($query, $status)
@@ -70,7 +86,7 @@ class ContentPost extends Model
      */
     public function scopePlatform($query, $platform)
     {
-        return $query->where('platform', $platform);
+        return $query->whereJsonContains('platform', $platform);
     }
 
     /**

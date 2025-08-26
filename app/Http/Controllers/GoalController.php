@@ -96,6 +96,8 @@ class GoalController extends Controller
             'description' => 'nullable|string',
             'target_value' => 'required|numeric|min:0',
             'current_value' => 'nullable|numeric|min:0',
+            'budget' => 'nullable|numeric|min:0',
+            'labor_hours' => 'nullable|numeric|min:0',
             'quarter' => 'required|string|in:Q1,Q2,Q3,Q4',
             'year' => 'required|integer|min:2020|max:2030',
             'deadline' => 'required|date|after_or_equal:today',
@@ -152,6 +154,8 @@ class GoalController extends Controller
             'description' => 'sometimes|nullable|string',
             'target_value' => 'sometimes|required|numeric|min:0',
             'current_value' => 'sometimes|nullable|numeric|min:0',
+            'budget' => 'sometimes|nullable|numeric|min:0',
+            'labor_hours' => 'sometimes|nullable|numeric|min:0',
             'quarter' => 'sometimes|required|string|in:Q1,Q2,Q3,Q4',
             'year' => 'sometimes|required|integer|min:2020|max:2030',
             'deadline' => 'sometimes|required|date|after:today',
@@ -161,7 +165,17 @@ class GoalController extends Controller
             'progress' => 'sometimes|nullable|numeric|min:0|max:100',
         ]);
 
+        $oldStatus = $goal->status;
         $goal->update($validated);
+
+        // Send notification if status changed to completed (achieved)
+        if ($oldStatus !== 'completed' && $goal->status === 'completed') {
+            \App\Services\NotificationService::sendGoalAchievement(
+                $goal->user,
+                $goal->title,
+                ['goal_id' => $goal->id]
+            );
+        }
 
         return redirect()->route('goals.index')
             ->with('success', 'Goal updated successfully');

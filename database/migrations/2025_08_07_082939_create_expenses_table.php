@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('expenses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->enum('category', ['Labor', 'Software', 'Table', 'Advertising']);
+            $table->enum('category', ['Labor', 'Software', 'Table', 'Advertising', 'Office Supplies', 'Travel', 'Utilities', 'Marketing', 'Inventory']);
             $table->decimal('amount', 10, 2);
             $table->date('date');
             $table->text('description')->nullable();

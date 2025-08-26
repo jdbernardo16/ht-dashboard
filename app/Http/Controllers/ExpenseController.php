@@ -160,7 +160,18 @@ class ExpenseController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        $oldStatus = $expense->status;
         $expense->update($validated);
+
+        // Send notification if status changed to paid (approved)
+        if ($oldStatus !== 'paid' && $expense->status === 'paid') {
+            \App\Services\NotificationService::sendExpenseApproval(
+                $expense->user,
+                $expense->amount,
+                $expense->category,
+                ['expense_id' => $expense->id]
+            );
+        }
 
         return redirect()->route('expenses.index')
             ->with('success', 'Expense updated successfully');

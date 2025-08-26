@@ -49,4 +49,20 @@ class Task extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    /**
+     * Get all media files associated with this task
+     */
+    public function media()
+    {
+        return $this->hasMany(TaskMedia::class);
+    }
+
+    /**
+     * Get the primary media file for this task
+     */
+    public function primaryMedia()
+    {
+        return $this->hasOne(TaskMedia::class)->where('is_primary', true);
+    }
 }

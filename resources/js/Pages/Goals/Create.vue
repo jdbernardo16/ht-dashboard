@@ -101,6 +101,52 @@
                                 </p>
                             </div>
 
+                            <!-- Budget -->
+                            <div>
+                                <label
+                                    for="budget"
+                                    class="block text-sm font-medium text-gray-700"
+                                    >Budget ($)</label
+                                >
+                                <input
+                                    type="number"
+                                    id="budget"
+                                    v-model="form.budget"
+                                    min="0"
+                                    step="0.01"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                />
+                                <p
+                                    v-if="errors.budget"
+                                    class="mt-1 text-sm text-red-600"
+                                >
+                                    {{ errors.budget }}
+                                </p>
+                            </div>
+
+                            <!-- Labor Hours -->
+                            <div>
+                                <label
+                                    for="labor_hours"
+                                    class="block text-sm font-medium text-gray-700"
+                                    >Labor Hours</label
+                                >
+                                <input
+                                    type="number"
+                                    id="labor_hours"
+                                    v-model="form.labor_hours"
+                                    min="0"
+                                    step="0.01"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                />
+                                <p
+                                    v-if="errors.labor_hours"
+                                    class="mt-1 text-sm text-red-600"
+                                >
+                                    {{ errors.labor_hours }}
+                                </p>
+                            </div>
+
                             <!-- Quarter -->
                             <div>
                                 <label
@@ -216,6 +262,8 @@ const form = useForm({
     description: "",
     target_value: 0,
     current_value: 0,
+    budget: 0,
+    labor_hours: 0,
     quarter: "",
     year: new Date().getFullYear(),
     deadline: new Date().toISOString().split("T")[0],

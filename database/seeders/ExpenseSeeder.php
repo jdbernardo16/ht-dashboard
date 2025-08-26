@@ -25,6 +25,7 @@ class ExpenseSeeder extends Seeder
             'Travel',
             'Utilities',
             'Marketing',
+            'Inventory',
         ];
 
         $paymentMethods = ['cash', 'card', 'online', 'bank_transfer'];
@@ -49,6 +50,7 @@ class ExpenseSeeder extends Seeder
 
                 Expense::create([
                     'user_id' => $user->id,
+                    'title' => $this->generateExpenseTitle($category),
                     'category' => $category,
                     'amount' => $amount,
                     'description' => $this->generateExpenseDescription($category),
@@ -69,6 +71,7 @@ class ExpenseSeeder extends Seeder
         $recurringExpenses = [
             [
                 'user_id' => $users->first()->id,
+                'title' => 'Adobe Creative Cloud Subscription',
                 'category' => 'Software',
                 'amount' => 299.00,
                 'description' => 'Adobe Creative Cloud subscription',
@@ -81,6 +84,7 @@ class ExpenseSeeder extends Seeder
             ],
             [
                 'user_id' => $users->first()->id,
+                'title' => 'Internet Service',
                 'category' => 'Utilities',
                 'amount' => 150.00,
                 'description' => 'High-speed internet service',
@@ -93,6 +97,7 @@ class ExpenseSeeder extends Seeder
             ],
             [
                 'user_id' => $users->last()->id,
+                'title' => 'Legal Retainer Fee',
                 'category' => 'Labor',
                 'amount' => 500.00,
                 'description' => 'Monthly legal retainer',
@@ -172,6 +177,13 @@ class ExpenseSeeder extends Seeder
                 'Lead generation service',
                 'Marketing collateral design',
             ],
+            'Inventory' => [
+                'Office supplies restock',
+                'Product inventory purchase',
+                'Stock replenishment order',
+                'Merchandise inventory acquisition',
+                'Supply chain restocking',
+            ],
         ];
 
         // Return a category-specific description if available
@@ -192,6 +204,94 @@ class ExpenseSeeder extends Seeder
     }
 
     /**
+     * Generate expense titles
+     */
+    private function generateExpenseTitle(string $category): string
+    {
+        $titles = [
+            'Labor' => [
+                'Contractor Payment',
+                'Freelancer Invoice',
+                'Consulting Services',
+                'Legal Retainer',
+                'Hourly Services'
+            ],
+            'Software' => [
+                'Software Subscription',
+                'Annual License',
+                'Tool Subscription',
+                'App Purchase',
+                'Platform Fee'
+            ],
+            'Table' => [
+                'Office Furniture',
+                'Conference Table',
+                'Workstation Desk',
+                'Standing Desk',
+                'Meeting Table'
+            ],
+            'Advertising' => [
+                'Ad Campaign',
+                'Marketing Promotion',
+                'Social Media Ads',
+                'Online Advertising',
+                'Brand Campaign'
+            ],
+            'Office Supplies' => [
+                'Office Supplies',
+                'Stationery Purchase',
+                'Printer Supplies',
+                'Office Materials',
+                'Work Supplies'
+            ],
+            'Travel' => [
+                'Business Travel',
+                'Client Meeting Trip',
+                'Conference Travel',
+                'Work Trip',
+                'Business Journey'
+            ],
+            'Utilities' => [
+                'Utility Bill',
+                'Internet Service',
+                'Electricity Payment',
+                'Phone Service',
+                'Cloud Hosting'
+            ],
+            'Marketing' => [
+                'Marketing Campaign',
+                'Brand Strategy',
+                'Lead Generation',
+                'Content Creation',
+                'Email Marketing'
+            ],
+            'Inventory' => [
+                'Inventory Restock',
+                'Supply Purchase',
+                'Stock Replenishment',
+                'Materials Order',
+                'Product Inventory'
+            ],
+        ];
+
+        // Return a category-specific title if available
+        if (isset($titles[$category]) && is_array($titles[$category]) && count($titles[$category]) > 0) {
+            $list = $titles[$category];
+            return $list[array_rand($list)];
+        }
+
+        // Fallback: pick any title from the pool, or return a generic default
+        $all = [];
+        foreach ($titles as $arr) {
+            if (is_array($arr)) {
+                $all = array_merge($all, $arr);
+            }
+        }
+
+        return count($all) ? $all[array_rand($all)] : 'Business Expense';
+    }
+
+    /**
      * Generate expense notes
      */
     private function generateExpenseNotes(string $category): string
@@ -205,6 +305,7 @@ class ExpenseSeeder extends Seeder
             'Travel' => 'Business travel approved by supervisor',
             'Utilities' => 'Monthly utility bill for office',
             'Marketing' => 'Marketing activity approved by manager',
+            'Inventory' => 'Inventory restock for business operations',
         ];
 
         return $notes[$category] ?? 'Standard business expense';
@@ -224,6 +325,7 @@ class ExpenseSeeder extends Seeder
             'Travel' => ['Delta Airlines', 'Marriott', 'Uber', 'Enterprise', 'Southwest'],
             'Utilities' => ['Comcast Business', 'Local Power Co.', 'Verizon', 'AT&T', 'Cloud Provider'],
             'Marketing' => ['Local Marketing Agency', 'Growth Agency', 'Marketing Consultants', 'Agency Co.', 'Freelance Marketer'],
+            'Inventory' => ['Office Supply Co.', 'Wholesale Distributor', 'Supply Chain Partner', 'Inventory Vendor', 'Business Supplies Inc.'],
         ];
 
         // Return a category-specific vendor if available

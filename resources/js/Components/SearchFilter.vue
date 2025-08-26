@@ -281,6 +281,7 @@ const props = defineProps({
         type: Array,
         default: () => [
             { value: "pending", label: "Pending" },
+            { value: "not_started", label: "Not Started" },
             { value: "in_progress", label: "In Progress" },
             { value: "completed", label: "Completed" },
             { value: "cancelled", label: "Cancelled" },

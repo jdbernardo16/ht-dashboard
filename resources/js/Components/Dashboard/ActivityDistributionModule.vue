@@ -3,6 +3,8 @@
         title="Activity Distribution"
         :loading="loading"
         :error="error"
+        :show-time-period="true"
+        @period-change="$emit('period-change', $event)"
     >
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Pie Chart -->
@@ -114,6 +116,8 @@ const props = defineProps({
         default: null,
     },
 });
+
+defineEmits(["period-change"]);
 
 const pieChartRef = ref(null);
 let chartInstance = null;

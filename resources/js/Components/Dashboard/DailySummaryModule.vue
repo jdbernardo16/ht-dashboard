@@ -1,5 +1,11 @@
 <template>
-    <DashboardModule title="Daily Summary" :loading="loading" :error="error">
+    <DashboardModule
+        title="Summary"
+        :loading="loading"
+        :error="error"
+        :show-time-period="true"
+        @period-change="$emit('period-change', $event)"
+    >
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Tasks Summary -->
             <div class="bg-white rounded-lg p-4 border">
@@ -63,15 +69,10 @@
                 <p class="text-sm text-gray-500">Today's revenue</p>
                 <div class="mt-2 flex items-center">
                     <span
-                        :class="
-                            summary.revenue.change >= 0
-                                ? 'text-green-600'
-                                : 'text-red-600'
-                        "
+                        :class="revenueChange.colorClass"
                         class="text-sm font-medium"
                     >
-                        {{ summary.revenue.change >= 0 ? "+" : ""
-                        }}{{ summary.revenue.change }}%
+                        {{ revenueChange.formatted }}
                     </span>
                     <span class="text-sm text-gray-500 ml-1">vs yesterday</span>
                 </div>
@@ -142,6 +143,7 @@
 <script setup>
 import { computed } from "vue";
 import DashboardModule from "./DashboardModule.vue";
+import { formatPercentageWithColor } from "../../Utils/utils.js";
 
 const props = defineProps({
     summary: {
@@ -167,10 +169,17 @@ const props = defineProps({
     },
 });
 
+defineEmits(["period-change"]);
+
 const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-US", {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
     }).format(value);
 };
+
+// Computed properties for percentage formatting
+const revenueChange = computed(() => {
+    return formatPercentageWithColor(props.summary.revenue.change);
+});
 </script>

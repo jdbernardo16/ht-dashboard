@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\ContentPost;
+use App\Models\ContentPostMedia;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class ContentPostController extends Controller
@@ -35,7 +37,7 @@ class ContentPostController extends Controller
         }
 
         if ($request->has('platform')) {
-            $query->where('platform', $request->get('platform'));
+            $query->platform($request->get('platform'));
         }
 
         if ($request->has('content_type')) {
@@ -132,7 +134,8 @@ class ContentPostController extends Controller
 
         $validated = $request->validate([
             'client_id' => 'required|exists:users,id',
-            'platform' => 'required|string|max:255',
+            'platform' => 'required|array',
+            'platform.*' => 'string|in:website,facebook,instagram,twitter,linkedin,tiktok,youtube,pinterest,email,other',
             'content_type' => 'required|string|max:255',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -145,11 +148,20 @@ class ContentPostController extends Controller
             'tags' => 'nullable|array',
             'notes' => 'nullable|string',
             'engagement_metrics' => 'nullable|array',
+            'media' => 'nullable|array',
+            'media.*' => 'file|mimes:jpg,jpeg,png,gif,pdf,doc,docx,txt|max:10240', // 10MB max
+            'media' => 'nullable|array',
+            'media.*' => 'file|mimes:jpg,jpeg,png,gif,pdf,doc,docx,txt|max:10240', // 10MB max
         ]);
 
         $validated['user_id'] = Auth::id();
 
         $contentPost = ContentPost::create($validated);
+
+        // Process media uploads if any
+        if ($request->hasFile('media')) {
+            $this->processMediaUploads($request, $contentPost);
+        }
 
         return redirect()->route('content.index')
             ->with('success', 'Content post created successfully');
@@ -253,7 +265,8 @@ class ContentPostController extends Controller
 
         $validated = $request->validate([
             'client_id' => 'sometimes|required|exists:users,id',
-            'platform' => 'sometimes|required|string|max:255',
+            'platform' => 'sometimes|required|array',
+            'platform.*' => 'string|in:website,facebook,instagram,twitter,linkedin,tiktok,youtube,pinterest,email,other',
             'content_type' => 'sometimes|required|string|max:255',
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
@@ -268,7 +281,24 @@ class ContentPostController extends Controller
             'engagement_metrics' => 'nullable|array',
         ]);
 
+        $oldStatus = $contentPost->status;
         $contentPost->update($validated);
+
+        // Process media uploads if any
+        if ($request->hasFile('media')) {
+            $this->processMediaUploads($request, $contentPost);
+        }
+
+        // Send notification if status changed to published
+        if ($oldStatus !== 'published' && $contentPost->status === 'published') {
+            $platform = !empty($contentPost->platform) ? implode(', ', $contentPost->platform) : 'multiple platforms';
+            \App\Services\NotificationService::sendContentPublication(
+                $contentPost->user,
+                $contentPost->title,
+                $platform,
+                ['content_id' => $contentPost->id]
+            );
+        }
 
         return redirect()->route('content.index')
             ->with('success', 'Content post updated successfully');
@@ -312,9 +342,20 @@ class ContentPostController extends Controller
             ->groupBy('month')
             ->pluck('total', 'month');
 
-        $platformStats = $query->selectRaw('platform, COUNT(*) as total')
-            ->groupBy('platform')
-            ->pluck('total', 'platform');
+        // Get all posts and manually count platforms
+        $allPosts = $query->get();
+        $platformStats = [];
+        
+        $allPlatforms = ['website', 'facebook', 'instagram', 'twitter', 'linkedin', 'tiktok', 'youtube', 'pinterest', 'email', 'other'];
+        
+        foreach ($allPlatforms as $platform) {
+            $platformStats[$platform] = $allPosts->filter(function ($post) use ($platform) {
+                return in_array($platform, $post->platform ?? []);
+            })->count();
+        }
+        
+        // Remove platforms with zero counts
+        $platformStats = array_filter($platformStats);
 
         $contentTypeStats = $query->selectRaw('content_type, COUNT(*) as total')
             ->groupBy('content_type')
@@ -332,5 +373,33 @@ class ContentPostController extends Controller
                 'content_type_stats' => $contentTypeStats,
             ]
         ]);
+    }
+
+    /**
+     * Process media file uploads for a content post
+     */
+    protected function processMediaUploads(Request $request, ContentPost $contentPost)
+    {
+        $uploadedFiles = $request->file('media');
+        $order = 0;
+
+        foreach ($uploadedFiles as $file) {
+            // Generate unique filename
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('content_post_media', $fileName, 'public');
+
+            // Create media record
+            ContentPostMedia::create([
+                'content_post_id' => $contentPost->id,
+                'user_id' => Auth::id(),
+                'file_name' => $fileName,
+                'file_path' => $filePath,
+                'mime_type' => $file->getMimeType(),
+                'file_size' => $file->getSize(),
+                'original_name' => $file->getClientOriginalName(),
+                'order' => $order++,
+                'is_primary' => $order === 1, // First file is primary
+            ]);
+        }
     }
 }

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Models\TaskMedia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class TaskController extends Controller
@@ -85,7 +87,7 @@ class TaskController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|in:low,medium,high,urgent',
-            'status' => 'required|in:pending,in_progress,completed,cancelled',
+            'status' => 'required|in:pending,in_progress,completed,cancelled,not_started',
             'due_date' => 'required|date',
             'assigned_to' => 'nullable|exists:users,id',
             'category' => 'nullable|string|max:100',
@@ -98,6 +100,8 @@ class TaskController extends Controller
             'related_goal_id' => 'nullable|exists:goals,id',
             'is_recurring' => 'boolean',
             'recurring_frequency' => 'nullable|in:daily,weekly,monthly,yearly|required_if:is_recurring,true',
+            'media' => 'nullable|array',
+            'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,txt|max:10240', // 10MB max
         ]);
 
         $validated['user_id'] = Auth::id();
@@ -108,6 +112,11 @@ class TaskController extends Controller
         }
 
         $task = Task::create($validated);
+
+        // Handle file uploads if any
+        if ($request->hasFile('media')) {
+            $this->processMediaUploads($request, $task);
+        }
 
         return redirect()->route('tasks.index')->with('success', 'Task created successfully');
     }
@@ -202,7 +211,7 @@ class TaskController extends Controller
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'sometimes|required|in:low,medium,high,urgent',
-            'status' => 'sometimes|required|in:pending,in_progress,completed,cancelled',
+            'status' => 'sometimes|required|in:pending,in_progress,completed,cancelled,not_started',
             'due_date' => 'sometimes|required|date',
             'assigned_to' => 'nullable|exists:users,id',
             'category' => 'nullable|string|max:100',
@@ -215,6 +224,8 @@ class TaskController extends Controller
             'related_goal_id' => 'nullable|exists:goals,id',
             'is_recurring' => 'boolean',
             'recurring_frequency' => 'nullable|in:daily,weekly,monthly,yearly|required_if:is_recurring,true',
+            'media' => 'nullable|array',
+            'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,txt|max:10240', // 10MB max
         ]);
 
         // Handle tags
@@ -222,7 +233,23 @@ class TaskController extends Controller
             $validated['tags'] = json_encode($validated['tags']);
         }
 
+        $oldStatus = $task->status;
         $task->update($validated);
+
+        // Handle file uploads if any
+        if ($request->hasFile('media')) {
+            $this->processMediaUploads($request, $task);
+        }
+
+        // Send notification if status changed to completed
+        if ($oldStatus !== 'completed' && $task->status === 'completed') {
+            \App\Services\NotificationService::sendTaskUpdate(
+                $task->assignedTo ?? $task->user,
+                $task->title,
+                'completed',
+                ['task_id' => $task->id]
+            );
+        }
 
         return redirect()->back()->with('success', 'Task updated successfully');
     }
@@ -247,12 +274,23 @@ class TaskController extends Controller
         Gate::authorize('update', $task);
 
         $validated = $request->validate([
-            'status' => 'required|in:pending,in_progress,completed,cancelled',
+            'status' => 'required|in:pending,in_progress,completed,cancelled,not_started',
             'actual_hours' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
+        $oldStatus = $task->status;
         $task->update($validated);
+
+        // Send notification if status changed to completed
+        if ($oldStatus !== 'completed' && $task->status === 'completed') {
+            \App\Services\NotificationService::sendTaskUpdate(
+                $task->assignedTo ?? $task->user,
+                $task->title,
+                'completed',
+                ['task_id' => $task->id]
+            );
+        }
 
         return redirect()->back()->with('success', 'Task status updated successfully');
     }
@@ -329,5 +367,33 @@ class TaskController extends Controller
             'tasks' => $tasks,
             'filters' => $request->only(['status', 'priority'])
         ]);
+    }
+
+    /**
+     * Process media file uploads for a task
+     */
+    protected function processMediaUploads(Request $request, Task $task)
+    {
+        $uploadedFiles = $request->file('media');
+        $order = 0;
+
+        foreach ($uploadedFiles as $file) {
+            // Generate unique filename
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('task_media', $fileName, 'public');
+
+            // Create media record
+            TaskMedia::create([
+                'task_id' => $task->id,
+                'user_id' => Auth::id(),
+                'file_name' => $fileName,
+                'file_path' => $filePath,
+                'mime_type' => $file->getMimeType(),
+                'file_size' => $file->getSize(),
+                'original_name' => $file->getClientOriginalName(),
+                'order' => $order++,
+                'is_primary' => $order === 1, // First file is primary
+            ]);
+        }
     }
 }

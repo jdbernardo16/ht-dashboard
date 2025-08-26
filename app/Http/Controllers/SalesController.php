@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class SalesController extends Controller
@@ -190,7 +191,18 @@ class SalesController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        $oldStatus = $sale->status;
         $sale->update($validated);
+
+        // Send notification if status changed to completed
+        if ($oldStatus !== 'completed' && $sale->status === 'completed') {
+            \App\Services\NotificationService::sendSaleCompletion(
+                $sale->user,
+                $sale->amount,
+                $sale->client->name ?? 'Unknown Client',
+                ['sale_id' => $sale->id]
+            );
+        }
 
         return redirect()->route('sales.index')
             ->with('success', 'Sale updated successfully');
@@ -207,6 +219,66 @@ class SalesController extends Controller
 
         return redirect()->route('sales.index')
             ->with('success', 'Sale deleted successfully');
+    }
+
+    /**
+     * Search clients by name or email
+     */
+    public function searchClients(Request $request)
+    {
+        Gate::authorize('viewAny', Sale::class);
+
+        $search = $request->get('search', '');
+
+        $clients = User::where('role', 'client')
+            ->where(function ($query) use ($search) {
+                $query->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
+            })
+            ->select('id', 'first_name', 'last_name', 'email')
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->limit(10)
+            ->get()
+            ->map(function ($client) {
+                return [
+                    'id' => $client->id,
+                    'name' => $client->first_name . ' ' . $client->last_name,
+                    'email' => $client->email
+                ];
+            });
+
+        return response()->json($clients);
+    }
+
+    /**
+     * Create a new client
+     */
+    public function createClient(Request $request)
+    {
+        Gate::authorize('create', Sale::class);
+
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+        ]);
+
+        $client = User::create([
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'email' => $validated['email'],
+            'role' => 'client',
+            'password' => bcrypt(Str::random(12)), // Generate random password
+        ]);
+
+        return response()->json([
+            'id' => $client->id,
+            'name' => $client->first_name . ' ' . $client->last_name,
+            'email' => $client->email
+        ], 201);
     }
 
     /**

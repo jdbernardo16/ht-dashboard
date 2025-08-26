@@ -19,10 +19,11 @@ class ExpenseFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'category' => fake()->randomElement(['Labor', 'Software', 'Table', 'Advertising', 'Office Supplies', 'Travel', 'Utilities', 'Marketing']),
+            'title' => fake()->words(3, true),
+            'category' => fake()->randomElement(['Labor', 'Software', 'Table', 'Advertising', 'Office Supplies', 'Travel', 'Utilities', 'Marketing', 'Inventory']),
             'amount' => fake()->randomFloat(2, 10, 5000),
             'expense_date' => fake()->date(),
-            'description' => fake()->optional()->sentence(),
+            'description' => fake()->optional()->paragraph(),
             'status' => fake()->randomElement(['pending', 'paid', 'cancelled']),
             'payment_method' => fake()->randomElement(['cash', 'card', 'online', 'bank_transfer']),
             'merchant' => fake()->optional()->company(),

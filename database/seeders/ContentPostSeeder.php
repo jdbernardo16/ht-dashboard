@@ -105,7 +105,14 @@ class ContentPostSeeder extends Seeder
 
                 $type     = $contentTypes[array_rand($contentTypes)];
                 $status   = $statuses[array_rand($statuses)];
-                $platform = $platforms[array_rand($platforms)];
+                // Select 1-3 random platforms for each content post
+                $selectedPlatforms = array_rand($platforms, rand(1, 3));
+                if (!is_array($selectedPlatforms)) {
+                    $selectedPlatforms = [$selectedPlatforms];
+                }
+                $platformsArray = array_map(function($index) use ($platforms) {
+                    return $platforms[$index];
+                }, $selectedPlatforms);
                 $title    = $this->titleForType($type, $blogTitles, $socialContent, $emailSubjects);
 
                 $content = $this->contentForType($type, $title);
@@ -115,7 +122,7 @@ class ContentPostSeeder extends Seeder
                     'user_id'            => $user->id,
                     'client_id'          => null,
                     'category_id'        => $categories->random()->id,
-                    'platform'           => $platform,
+                    'platforms'          => $platformsArray,
                     'content_type'       => $type,
                     'title'              => $title,
                     'description'        => $description,
@@ -256,7 +263,7 @@ class ContentPostSeeder extends Seeder
                 'user_id'          => $admin->id,
                 'client_id'        => null,
                 'category_id'      => $cat->id,
-                'platform'         => 'website',
+                'platforms'        => ['website', 'facebook', 'linkedin'],
                 'content_type'     => $p['type'],
                 'title'            => $p['title'],
                 'description'      => $description,

@@ -204,6 +204,22 @@ const formFields = [
         min: 0,
         step: 0.01,
     },
+    {
+        name: "budget",
+        label: "Budget ($)",
+        type: "number",
+        required: false,
+        min: 0,
+        step: 0.01,
+    },
+    {
+        name: "labor_hours",
+        label: "Labor Hours",
+        type: "number",
+        required: false,
+        min: 0,
+        step: 0.01,
+    },
     { name: "target_date", label: "Target Date", type: "date", required: true },
     {
         name: "priority",

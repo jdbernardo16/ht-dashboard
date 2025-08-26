@@ -8,6 +8,7 @@ use App\Http\Controllers\GoalController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -41,6 +42,21 @@ Route::middleware(['auth', 'verified'])->prefix('api/dashboard')->group(function
     Route::get('/expenses', [DashboardController::class, 'getExpenses'])->name('dashboard.api.expenses');
     Route::get('/content-stats', [DashboardController::class, 'getContentStats'])->name('dashboard.api.content-stats');
     Route::get('/quarterly-goals', [DashboardController::class, 'getQuarterlyGoals'])->name('dashboard.api.quarterly-goals');
+});
+
+// Notification API routes
+Route::middleware(['auth', 'verified'])->prefix('api/notifications')->group(function () {
+    Route::get('/', [NotificationController::class, 'index'])->name('notifications.api.index');
+    Route::get('/unread-count', [NotificationController::class, 'getUnreadCount'])->name('notifications.api.unread-count');
+    Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.api.mark-all-read');
+    Route::get('/{notification}', [NotificationController::class, 'show'])->name('notifications.api.show');
+    Route::put('/{notification}', [NotificationController::class, 'update'])->name('notifications.api.update');
+    Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('notifications.api.destroy');
+});
+
+// Notifications Page Route
+Route::middleware(['auth', 'verified'])->prefix('notifications')->group(function () {
+    Route::get('/', [NotificationController::class, 'indexPage'])->name('notifications.index');
 });
 
 // No API routes - using pure Inertia routing

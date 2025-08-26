@@ -3,6 +3,8 @@
         title="Content Performance"
         :loading="loading"
         :error="error"
+        :show-time-period="true"
+        @period-change="$emit('period-change', $event)"
     >
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Performance Metrics -->
@@ -43,9 +45,12 @@
                             </div>
                         </div>
                         <div class="mt-2">
-                            <span class="text-sm text-green-600 font-medium"
-                                >+{{ content.metrics.viewsGrowth }}%</span
+                            <span
+                                :class="viewsGrowth.colorClass"
+                                class="text-sm font-medium"
                             >
+                                {{ viewsGrowth.formatted }}
+                            </span>
                             <span class="text-sm text-gray-500">
                                 vs last month</span
                             >
@@ -186,6 +191,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import { Chart, registerables } from "chart.js";
+import { formatPercentageWithColor } from "../../Utils/utils.js";
 import DashboardModule from "./DashboardModule.vue";
 
 // Register Chart.js components
@@ -214,6 +220,8 @@ const props = defineProps({
         default: null,
     },
 });
+
+defineEmits(["period-change"]);
 
 const contentChartRef = ref(null);
 let chartInstance = null;
@@ -330,6 +338,15 @@ const formatDate = (dateString) => {
         day: "numeric",
     });
 };
+
+// Computed properties for percentage formatting
+const viewsGrowth = computed(() => {
+    return formatPercentageWithColor(content.value.metrics.viewsGrowth);
+});
+
+const engagementGrowth = computed(() => {
+    return formatPercentageWithColor(content.value.metrics.engagementGrowth);
+});
 
 const createChart = () => {
     if (!contentChartRef.value) return;

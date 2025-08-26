@@ -152,6 +152,7 @@ const columns = [
 // Status options
 const statusOptions = [
     { value: "pending", label: "Pending" },
+    { value: "not_started", label: "Not Started" },
     { value: "in_progress", label: "In Progress" },
     { value: "completed", label: "Completed" },
     { value: "cancelled", label: "Cancelled" },
@@ -251,6 +252,7 @@ const formFields = [
 // Table filters
 const tableFilters = [
     { value: "pending", label: "Pending" },
+    { value: "not_started", label: "Not Started" },
     { value: "in_progress", label: "In Progress" },
     { value: "completed", label: "Completed" },
     { value: "cancelled", label: "Cancelled" },

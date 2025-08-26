@@ -19,9 +19,17 @@ class ContentPostFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'platform' => fake()->randomElement(['Facebook', 'TikTok', 'YouTube']),
+            'client_id' => User::factory()->create(['role' => 'client'])->id,
+            'title' => fake()->sentence(),
+            'platform' => [fake()->randomElement(['website', 'facebook', 'instagram', 'twitter', 'linkedin', 'tiktok', 'youtube', 'pinterest', 'email', 'other'])],
+            'content_type' => fake()->randomElement(['post', 'story', 'reel', 'video', 'image', 'carousel', 'live', 'article']),
+            'description' => fake()->paragraph(),
             'post_count' => fake()->numberBetween(1, 10),
-            'date' => fake()->date(),
+            'scheduled_date' => fake()->date(),
+            'status' => fake()->randomElement(['draft', 'scheduled', 'published', 'archived']),
+            'content_category' => fake()->word(),
+            'tags' => [fake()->word(), fake()->word()],
+            'notes' => fake()->paragraph(),
             'engagement_metrics' => [
                 'likes' => fake()->numberBetween(0, 1000),
                 'shares' => fake()->numberBetween(0, 500),

@@ -41,6 +41,20 @@
                         </div>
                     </template>
 
+                    <template #platform="{ item }">
+                        <div class="flex flex-wrap gap-1">
+                            <span
+                                v-for="platform in Array.isArray(item.platform)
+                                    ? item.platform
+                                    : [item.platform]"
+                                :key="platform"
+                                class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                            >
+                                {{ formatPlatform(platform) }}
+                            </span>
+                        </div>
+                    </template>
+
                     <template #content_type="{ item }">
                         <span
                             :class="getTypeClass(item.content_type)"
@@ -131,6 +145,7 @@ const posts = computed(() => props.contentPosts.data || []);
 const columns = [
     { key: "id", label: "ID", sortable: true },
     { key: "title", label: "Title", sortable: true },
+    { key: "platform", label: "Platforms", sortable: true },
     { key: "content_type", label: "Type", sortable: true },
     { key: "status", label: "Status", sortable: true },
     { key: "scheduled_date", label: "Scheduled", type: "date", sortable: true },
@@ -315,6 +330,25 @@ const formatDate = (date) => {
 
 const formatStatus = (status) => {
     return status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ");
+};
+
+const formatPlatform = (platform) => {
+    const platformMap = {
+        website: "Website",
+        facebook: "Facebook",
+        instagram: "Instagram",
+        twitter: "Twitter",
+        linkedin: "LinkedIn",
+        tiktok: "TikTok",
+        youtube: "YouTube",
+        pinterest: "Pinterest",
+        email: "Email",
+        other: "Other",
+    };
+    return (
+        platformMap[platform] ||
+        platform.charAt(0).toUpperCase() + platform.slice(1)
+    );
 };
 
 const formatType = (type) => {

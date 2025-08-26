@@ -81,6 +81,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the user's notifications.
+     */
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    /**
      * Check if user has admin role
      */
     public function isAdmin(): bool

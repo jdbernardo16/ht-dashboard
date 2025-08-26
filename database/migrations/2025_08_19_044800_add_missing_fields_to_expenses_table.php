@@ -32,7 +32,8 @@ return new class extends Migration
                 'Office Supplies',
                 'Travel',
                 'Utilities',
-                'Marketing'
+                'Marketing',
+                'Inventory'
             ])->change();
 
             // Add additional indexes for new fields
@@ -50,7 +51,7 @@ return new class extends Migration
         Schema::table('expenses', function (Blueprint $table) {
             $table->renameColumn('expense_date', 'date');
             $table->dropColumn(['status', 'payment_method', 'merchant', 'receipt_number', 'tax_amount', 'notes']);
-            $table->enum('category', ['Labor', 'Software', 'Table', 'Advertising'])->change();
+            $table->enum('category', ['Labor', 'Software', 'Table', 'Advertising', 'Inventory'])->change();
         });
     }
 };

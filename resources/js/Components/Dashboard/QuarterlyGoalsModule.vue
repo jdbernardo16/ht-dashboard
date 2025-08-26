@@ -1,5 +1,11 @@
 <template>
-    <DashboardModule title="Quarterly Goals" :loading="loading" :error="error">
+    <DashboardModule
+        title="Quarterly Goals"
+        :loading="loading"
+        :error="error"
+        :show-time-period="true"
+        @period-change="$emit('period-change', $event)"
+    >
         <div class="space-y-6">
             <!-- Overall Progress -->
             <div class="bg-white rounded-lg p-6 border">
@@ -192,6 +198,8 @@ const props = defineProps({
         default: null,
     },
 });
+
+defineEmits(["period-change"]);
 
 const goals = computed(() => {
     if (!props.data.goals || props.data.goals.length === 0) {

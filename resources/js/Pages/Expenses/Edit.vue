@@ -38,12 +38,36 @@
                                     <option value="Travel">Travel</option>
                                     <option value="Utilities">Utilities</option>
                                     <option value="Marketing">Marketing</option>
+                                    <option value="Inventory">Inventory</option>
                                 </select>
                                 <p
                                     v-if="form.errors.category"
                                     class="mt-1 text-sm text-red-600"
                                 >
                                     {{ form.errors.category }}
+                                </p>
+                            </div>
+
+                            <!-- Title -->
+                            <div>
+                                <label
+                                    for="title"
+                                    class="block text-sm font-medium text-gray-700"
+                                >
+                                    Title *
+                                </label>
+                                <input
+                                    type="text"
+                                    id="title"
+                                    v-model="form.title"
+                                    required
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                />
+                                <p
+                                    v-if="form.errors.title"
+                                    class="mt-1 text-sm text-red-600"
+                                >
+                                    {{ form.errors.title }}
                                 </p>
                             </div>
 
@@ -55,13 +79,13 @@
                                 >
                                     Description *
                                 </label>
-                                <input
-                                    type="text"
+                                <textarea
                                     id="description"
                                     v-model="form.description"
                                     required
+                                    rows="4"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                />
+                                ></textarea>
                                 <p
                                     v-if="form.errors.description"
                                     class="mt-1 text-sm text-red-600"
@@ -306,6 +330,7 @@ const props = defineProps({
 });
 
 const form = useForm({
+    title: props.expense.title || "",
     description: props.expense.description || "",
     amount: props.expense.amount || 0,
     expense_date: props.expense.expense_date || "",
