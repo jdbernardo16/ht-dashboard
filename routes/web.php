@@ -123,6 +123,9 @@ Route::middleware(['auth', 'verified'])->prefix('tasks')->group(function () {
     Route::put('/{task}', [TaskController::class, 'update'])->name('tasks.update');
     Route::put('/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
     Route::delete('/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+    
+    // Media routes
+    Route::delete('/{task}/media/{media}', [TaskController::class, 'destroyMedia'])->name('tasks.media.destroy');
 });
 
 // User Management Routes (Admin only)

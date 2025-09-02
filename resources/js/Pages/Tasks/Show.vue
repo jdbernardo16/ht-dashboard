@@ -467,10 +467,17 @@ const formatTags = (tags) => {
     if (!tags) return [];
     if (Array.isArray(tags)) return tags;
     if (typeof tags === "string") {
-        return tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter((tag) => tag);
+        try {
+            // Try to parse as JSON first (in case it's a JSON string)
+            const parsed = JSON.parse(tags);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            // If JSON parsing fails, treat as comma-separated string
+            return tags
+                .split(",")
+                .map((tag) => tag.trim())
+                .filter((tag) => tag);
+        }
     }
     return [];
 };

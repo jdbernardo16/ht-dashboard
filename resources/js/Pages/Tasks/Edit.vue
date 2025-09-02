@@ -421,7 +421,9 @@
                                                 <button
                                                     v-if="tagInput.trim()"
                                                     type="button"
-                                                    @click="addTagFromButton"
+                                                    @click.prevent.stop="
+                                                        addTagFromButton
+                                                    "
                                                     class="text-indigo-600 hover:text-indigo-800 focus:outline-none transition-colors p-1 rounded"
                                                     title="Add tag"
                                                     :disabled="form.processing"
@@ -474,7 +476,7 @@
                                                 Common tags:
                                             </p>
                                             <div class="flex flex-wrap gap-1">
-                                                <button
+                                                <span
                                                     v-for="(
                                                         suggestion, index
                                                     ) in tagSuggestions"
@@ -484,17 +486,27 @@
                                                             suggestion
                                                         )
                                                     "
-                                                    class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                                                    class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors cursor-pointer inline-block"
+                                                    role="button"
+                                                    tabindex="0"
+                                                    @keydown.enter="
+                                                        addSuggestion(
+                                                            suggestion
+                                                        )
+                                                    "
+                                                    @keydown.space.prevent="
+                                                        addSuggestion(
+                                                            suggestion
+                                                        )
+                                                    "
                                                 >
                                                     {{ suggestion }}
-                                                </button>
+                                                </span>
                                             </div>
                                         </div>
 
                                         <p class="mt-1 text-xs text-gray-500">
                                             Press Enter or Comma to add tags.
-                                            Tags are automatically saved as you
-                                            type.
                                         </p>
                                     </div>
                                     <InputError
@@ -530,9 +542,96 @@
                                     File Attachments
                                 </h3>
 
+                                <!-- Existing Media Files -->
+                                <div
+                                    v-if="task.media && task.media.length > 0"
+                                    class="mb-6"
+                                >
+                                    <InputLabel
+                                        value="Existing Files"
+                                        class="mb-2"
+                                    />
+                                    <div class="space-y-3">
+                                        <div
+                                            v-for="media in task.media"
+                                            :key="media.id"
+                                            class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
+                                        >
+                                            <div
+                                                class="flex items-center space-x-3"
+                                            >
+                                                <!-- File Icon -->
+                                                <div class="flex-shrink-0">
+                                                    <div
+                                                        class="w-10 h-10 flex items-center justify-center rounded bg-gray-200"
+                                                    >
+                                                        <span
+                                                            class="text-xs font-medium text-gray-600"
+                                                        >
+                                                            {{
+                                                                getFileExtension(
+                                                                    media.original_name
+                                                                )
+                                                            }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <!-- File Info -->
+                                                <div class="min-w-0 flex-1">
+                                                    <p
+                                                        class="text-sm font-medium text-gray-900 truncate"
+                                                    >
+                                                        {{
+                                                            media.original_name
+                                                        }}
+                                                    </p>
+                                                    <p
+                                                        class="text-xs text-gray-500"
+                                                    >
+                                                        {{
+                                                            formatFileSize(
+                                                                media.file_size
+                                                            )
+                                                        }}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <!-- Remove Button -->
+                                            <button
+                                                type="button"
+                                                @click="
+                                                    removeExistingMedia(
+                                                        media.id
+                                                    )
+                                                "
+                                                class="ml-3 text-red-600 hover:text-red-800"
+                                                title="Remove file"
+                                                :disabled="form.processing"
+                                            >
+                                                <svg
+                                                    class="h-5 w-5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M6 18L18 6M6 6l12 12"
+                                                    />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- New File Upload -->
                                 <div>
                                     <InputLabel
-                                        value="Upload Files"
+                                        value="Upload New Files"
                                         class="mb-2"
                                     />
                                     <FileUpload
@@ -679,21 +778,49 @@ const props = defineProps({
     },
 });
 
+// Helper function to convert ISO datetime to date input format (YYYY-MM-DD)
+const formatDateForInput = (isoDate) => {
+    if (!isoDate) return "";
+    const date = new Date(isoDate);
+    return date.toISOString().split("T")[0];
+};
+
 // Form setup with pre-populated data
 const form = useForm({
     title: props.task.title || "",
     description: props.task.description || "",
     priority: props.task.priority || "",
     status: props.task.status || "",
-    due_date: props.task.due_date || "",
-    assigned_to: props.task.assigned_to || "",
+    due_date: props.task.due_date
+        ? formatDateForInput(props.task.due_date)
+        : "",
+    assigned_to: props.task.assigned_to
+        ? props.task.assigned_to.toString()
+        : "",
     category: props.task.category || "",
     estimated_hours: props.task.estimated_hours || "",
     actual_hours: props.task.actual_hours || "",
-    tags: props.task.tags || "",
+    tags: (() => {
+        if (Array.isArray(props.task.tags)) {
+            return props.task.tags;
+        } else if (typeof props.task.tags === "string") {
+            try {
+                // Try to parse as JSON first (in case it's a JSON string)
+                const parsed = JSON.parse(props.task.tags);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                // If JSON parsing fails, treat as comma-separated string
+                return props.task.tags
+                    .split(",")
+                    .map((tag) => tag.trim())
+                    .filter((tag) => tag);
+            }
+        }
+        return [];
+    })(),
     notes: props.task.notes || "",
     related_goal_id: props.task.related_goal_id || "",
-    is_recurring: props.task.is_recurring || false,
+    is_recurring: Boolean(props.task.is_recurring),
     recurring_frequency: props.task.recurring_frequency || "",
     media: [],
 });
@@ -714,13 +841,8 @@ const tagSuggestions = ref([
 
 // Computed properties
 const currentTagsArray = computed(() => {
-    if (typeof form.tags === "string") {
-        return form.tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter((tag) => tag);
-    } else if (Array.isArray(form.tags)) {
-        return form.tags.filter((tag) => tag.trim());
+    if (Array.isArray(form.tags)) {
+        return form.tags.filter((tag) => tag && tag.trim());
     }
     return [];
 });
@@ -756,7 +878,10 @@ const handleTagInputKeydown = (event) => {
     }
 };
 
-const addTagFromButton = () => {
+const addTagFromButton = (event) => {
+    // Explicitly prevent any form submission
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
     const tagText = tagInput.value.trim();
     if (tagText) {
         addTag(tagText);
@@ -766,20 +891,12 @@ const addTagFromButton = () => {
 const addTag = (tagText) => {
     if (!tagText) return;
 
-    let currentTags = [];
-    if (typeof form.tags === "string") {
-        currentTags = form.tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter((tag) => tag);
-    } else if (Array.isArray(form.tags)) {
-        currentTags = [...form.tags];
-    }
+    const trimmedTag = tagText.trim();
+    if (!trimmedTag) return;
 
     // Add new tag if it doesn't already exist
-    if (!currentTags.includes(tagText)) {
-        currentTags.push(tagText);
-        form.tags = currentTags.join(",");
+    if (!form.tags.includes(trimmedTag)) {
+        form.tags.push(trimmedTag);
     }
 
     // Clear input and reset preview
@@ -788,20 +905,9 @@ const addTag = (tagText) => {
 };
 
 const removeTag = (index) => {
-    let currentTags = [];
-    if (typeof form.tags === "string") {
-        currentTags = form.tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter((tag) => tag);
-    } else if (Array.isArray(form.tags)) {
-        currentTags = [...form.tags];
-    }
-
     // Remove tag at index
-    if (index >= 0 && index < currentTags.length) {
-        currentTags.splice(index, 1);
-        form.tags = currentTags.join(",");
+    if (index >= 0 && index < form.tags.length) {
+        form.tags.splice(index, 1);
     }
 };
 
@@ -815,46 +921,40 @@ const handleFileError = (errorMessage) => {
 };
 
 const submitForm = () => {
-    // Process tags (already handled in the form)
-    const processedForm = {
-        ...form.data(),
-        tags: form.tags
-            ? form.tags
-                  .split(",")
-                  .map((tag) => tag.trim())
-                  .filter((tag) => tag)
-            : [],
-    };
+    console.log("Form data being submitted:", {
+        status: form.status,
+        priority: form.priority,
+        title: form.title,
+        tags: form.tags,
+    });
 
-    // Convert File objects to FormData for proper file upload
+    // When using forceFormData, we need to ensure array data is properly handled
+    // Convert tags array to JSON string for FormData compatibility
     const formData = new FormData();
 
-    // Add all form fields
-    Object.keys(processedForm).forEach((key) => {
-        if (key === "media") {
-            // Handle file uploads
-            processedForm.media.forEach((file, index) => {
-                formData.append(`media[${index}]`, file);
-            });
-        } else if (Array.isArray(processedForm[key])) {
-            // Handle arrays (like tags)
-            processedForm[key].forEach((item, index) => {
-                formData.append(`${key}[${index}]`, item);
+    // Add all form fields to FormData
+    Object.keys(form.data()).forEach((key) => {
+        if (key === "tags" && Array.isArray(form[key])) {
+            // Convert tags array to JSON string for FormData
+            formData.append(key, JSON.stringify(form[key]));
+        } else if (key === "media" && Array.isArray(form[key])) {
+            // Handle media files separately
+            form[key].forEach((file) => {
+                formData.append("media[]", file);
             });
         } else {
-            formData.append(key, processedForm[key]);
+            formData.append(key, form[key]);
         }
     });
 
     form.put(route("tasks.update", props.task.id), {
         data: formData,
-        headers: {
-            "Content-Type": "multipart/form-data",
-        },
         preserveScroll: true,
         onSuccess: () => {
+            // The backend redirects back to this page with success message
+            // No need for additional redirect here
+            console.log("Form submitted successfully");
             router.visit(route("tasks.index"));
-            // Success message will be handled by the redirect
         },
         onError: (errors) => {
             console.error("Form errors:", errors);
@@ -864,5 +964,47 @@ const submitForm = () => {
 
 const goBack = () => {
     router.visit(route("tasks.index"));
+};
+
+// Utility functions for media handling
+const getFileExtension = (filename) => {
+    const parts = filename.split(".");
+    return parts.length > 1
+        ? parts.pop().toUpperCase().substring(0, 3)
+        : "FILE";
+};
+
+const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+
+const removeExistingMedia = (mediaId) => {
+    if (!confirm("Are you sure you want to remove this file?")) {
+        return;
+    }
+
+    router.delete(
+        route("tasks.media.destroy", { task: props.task.id, media: mediaId }),
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                // Remove the media from the local task object
+                const index = props.task.media.findIndex(
+                    (m) => m.id === mediaId
+                );
+                if (index !== -1) {
+                    props.task.media.splice(index, 1);
+                }
+            },
+            onError: (errors) => {
+                console.error("Error removing media:", errors);
+                alert("Failed to remove the file. Please try again.");
+            },
+        }
+    );
 };
 </script>

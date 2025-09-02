@@ -329,11 +329,18 @@ const props = defineProps({
     },
 });
 
+// Helper function to convert ISO datetime to date input format (YYYY-MM-DD)
+const formatDateForInput = (isoDate) => {
+    if (!isoDate) return "";
+    const date = new Date(isoDate);
+    return date.toISOString().split("T")[0];
+};
+
 const form = useForm({
     title: props.expense.title || "",
     description: props.expense.description || "",
     amount: props.expense.amount || 0,
-    expense_date: props.expense.expense_date || "",
+    expense_date: formatDateForInput(props.expense.expense_date),
     category: props.expense.category || "",
     status: props.expense.status || "pending",
     payment_method: props.expense.payment_method || "cash",

@@ -93,8 +93,7 @@ class TaskController extends Controller
             'category' => 'nullable|string|max:100',
             'estimated_hours' => 'nullable|numeric|min:0',
             'actual_hours' => 'nullable|numeric|min:0',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:50',
+            'tags' => 'nullable',
             'notes' => 'nullable|string',
             'parent_task_id' => 'nullable|exists:tasks,id',
             'related_goal_id' => 'nullable|exists:goals,id',
@@ -106,9 +105,27 @@ class TaskController extends Controller
 
         $validated['user_id'] = Auth::id();
 
-        // Handle tags
+        // Handle tags - they might come as JSON string from FormData
         if (isset($validated['tags'])) {
-            $validated['tags'] = json_encode($validated['tags']);
+            if (is_string($validated['tags'])) {
+                try {
+                    // Try to decode JSON string
+                    $decodedTags = json_decode($validated['tags'], true);
+                    if (is_array($decodedTags)) {
+                        $validated['tags'] = json_encode($decodedTags);
+                    } else {
+                        // If not valid JSON, treat as comma-separated string
+                        $tagsArray = array_filter(array_map('trim', explode(',', $validated['tags'])));
+                        $validated['tags'] = json_encode($tagsArray);
+                    }
+                } catch (\Exception $e) {
+                    // If JSON decoding fails, treat as comma-separated string
+                    $tagsArray = array_filter(array_map('trim', explode(',', $validated['tags'])));
+                    $validated['tags'] = json_encode($tagsArray);
+                }
+            } elseif (is_array($validated['tags'])) {
+                $validated['tags'] = json_encode($validated['tags']);
+            }
         }
 
         $task = Task::create($validated);
@@ -194,7 +211,7 @@ class TaskController extends Controller
             ->get();
 
         return Inertia::render('Tasks/Edit', [
-            'task' => $task,
+            'task' => $task->load('media'),
             'users' => $users,
             'goals' => $goals,
         ]);
@@ -207,6 +224,9 @@ class TaskController extends Controller
     {
         Gate::authorize('update', $task);
 
+        // Debug: log incoming request data
+        \Log::debug('Task update request data:', $request->all());
+
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
@@ -217,8 +237,7 @@ class TaskController extends Controller
             'category' => 'nullable|string|max:100',
             'estimated_hours' => 'nullable|numeric|min:0',
             'actual_hours' => 'nullable|numeric|min:0',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:50',
+            'tags' => 'nullable',
             'notes' => 'nullable|string',
             'parent_task_id' => 'nullable|exists:tasks,id',
             'related_goal_id' => 'nullable|exists:goals,id',
@@ -228,9 +247,29 @@ class TaskController extends Controller
             'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,txt|max:10240', // 10MB max
         ]);
 
-        // Handle tags
+        \Log::debug('Validated data:', $validated);
+
+        // Handle tags - they might come as JSON string from FormData
         if (isset($validated['tags'])) {
-            $validated['tags'] = json_encode($validated['tags']);
+            if (is_string($validated['tags'])) {
+                try {
+                    // Try to decode JSON string
+                    $decodedTags = json_decode($validated['tags'], true);
+                    if (is_array($decodedTags)) {
+                        $validated['tags'] = json_encode($decodedTags);
+                    } else {
+                        // If not valid JSON, treat as comma-separated string
+                        $tagsArray = array_filter(array_map('trim', explode(',', $validated['tags'])));
+                        $validated['tags'] = json_encode($tagsArray);
+                    }
+                } catch (\Exception $e) {
+                    // If JSON decoding fails, treat as comma-separated string
+                    $tagsArray = array_filter(array_map('trim', explode(',', $validated['tags'])));
+                    $validated['tags'] = json_encode($tagsArray);
+                }
+            } elseif (is_array($validated['tags'])) {
+                $validated['tags'] = json_encode($validated['tags']);
+            }
         }
 
         $oldStatus = $task->status;
@@ -395,5 +434,26 @@ class TaskController extends Controller
                 'is_primary' => $order === 1, // First file is primary
             ]);
         }
+    }
+
+    /**
+     * Delete a media file from a task
+     */
+    public function destroyMedia(Task $task, TaskMedia $media)
+    {
+        Gate::authorize('update', $task);
+
+        // Verify that the media belongs to the task
+        if ($media->task_id !== $task->id) {
+            abort(403, 'This media does not belong to the specified task');
+        }
+
+        // Delete the file from storage
+        Storage::disk('public')->delete($media->file_path);
+
+        // Delete the media record
+        $media->delete();
+
+        return response()->json(['message' => 'Media file deleted successfully']);
     }
 }

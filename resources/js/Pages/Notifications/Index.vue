@@ -219,7 +219,7 @@
                             </p>
 
                             <!-- Additional Data -->
-                            <div
+                            <!-- <div
                                 v-if="
                                     notification.data &&
                                     Object.keys(notification.data).length > 0
@@ -232,7 +232,7 @@
                                 <pre class="text-xs text-gray-700 mt-1">{{
                                     JSON.stringify(notification.data, null, 2)
                                 }}</pre>
-                            </div>
+                            </div> -->
                         </div>
 
                         <!-- Actions -->

@@ -421,7 +421,9 @@
                                                 <button
                                                     v-if="tagInput.trim()"
                                                     type="button"
-                                                    @click="addTagFromButton"
+                                                    @click.prevent.stop="
+                                                        addTagFromButton
+                                                    "
                                                     class="text-indigo-600 hover:text-indigo-800 focus:outline-none transition-colors p-1 rounded"
                                                     title="Add tag"
                                                     :disabled="form.processing"
@@ -474,7 +476,7 @@
                                                 Common tags:
                                             </p>
                                             <div class="flex flex-wrap gap-1">
-                                                <button
+                                                <span
                                                     v-for="(
                                                         suggestion, index
                                                     ) in tagSuggestions"
@@ -484,17 +486,27 @@
                                                             suggestion
                                                         )
                                                     "
-                                                    class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                                                    class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors cursor-pointer inline-block"
+                                                    role="button"
+                                                    tabindex="0"
+                                                    @keydown.enter="
+                                                        addSuggestion(
+                                                            suggestion
+                                                        )
+                                                    "
+                                                    @keydown.space.prevent="
+                                                        addSuggestion(
+                                                            suggestion
+                                                        )
+                                                    "
                                                 >
                                                     {{ suggestion }}
-                                                </button>
+                                                </span>
                                             </div>
                                         </div>
 
                                         <p class="mt-1 text-xs text-gray-500">
                                             Press Enter or Comma to add tags.
-                                            Tags are automatically saved as you
-                                            type.
                                         </p>
                                     </div>
                                     <InputError
@@ -688,7 +700,7 @@ const form = useForm({
     category: "",
     estimated_hours: null,
     actual_hours: null,
-    tags: "",
+    tags: [],
     notes: "",
     parent_task_id: null,
     related_goal_id: "",
@@ -717,13 +729,8 @@ const tagSuggestions = ref([
 
 // Computed properties
 const currentTagsArray = computed(() => {
-    if (typeof form.tags === "string") {
-        return form.tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter((tag) => tag);
-    } else if (Array.isArray(form.tags)) {
-        return form.tags.filter((tag) => tag.trim());
+    if (Array.isArray(form.tags)) {
+        return form.tags.filter((tag) => tag && tag.trim());
     }
     return [];
 });
@@ -759,7 +766,10 @@ const handleTagInputKeydown = (event) => {
     }
 };
 
-const addTagFromButton = () => {
+const addTagFromButton = (event) => {
+    // Explicitly prevent any form submission
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
     const tagText = tagInput.value.trim();
     if (tagText) {
         addTag(tagText);
@@ -769,20 +779,12 @@ const addTagFromButton = () => {
 const addTag = (tagText) => {
     if (!tagText) return;
 
-    let currentTags = [];
-    if (typeof form.tags === "string") {
-        currentTags = form.tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter((tag) => tag);
-    } else if (Array.isArray(form.tags)) {
-        currentTags = [...form.tags];
-    }
+    const trimmedTag = tagText.trim();
+    if (!trimmedTag) return;
 
     // Add new tag if it doesn't already exist
-    if (!currentTags.includes(tagText)) {
-        currentTags.push(tagText);
-        form.tags = currentTags.join(",");
+    if (!form.tags.includes(trimmedTag)) {
+        form.tags.push(trimmedTag);
     }
 
     // Clear input and reset preview
@@ -791,20 +793,9 @@ const addTag = (tagText) => {
 };
 
 const removeTag = (index) => {
-    let currentTags = [];
-    if (typeof form.tags === "string") {
-        currentTags = form.tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter((tag) => tag);
-    } else if (Array.isArray(form.tags)) {
-        currentTags = [...form.tags];
-    }
-
     // Remove tag at index
-    if (index >= 0 && index < currentTags.length) {
-        currentTags.splice(index, 1);
-        form.tags = currentTags.join(",");
+    if (index >= 0 && index < form.tags.length) {
+        form.tags.splice(index, 1);
     }
 };
 
@@ -818,42 +809,9 @@ const handleFileError = (errorMessage) => {
 };
 
 const submitForm = () => {
-    // Process tags (already handled in the form)
-    const processedForm = {
-        ...form.data(),
-        tags: form.tags
-            ? form.tags
-                  .split(",")
-                  .map((tag) => tag.trim())
-                  .filter((tag) => tag)
-            : [],
-    };
-
-    // Convert File objects to FormData for proper file upload
-    const formData = new FormData();
-
-    // Add all form fields
-    Object.keys(processedForm).forEach((key) => {
-        if (key === "media") {
-            // Handle file uploads
-            processedForm.media.forEach((file, index) => {
-                formData.append(`media[${index}]`, file);
-            });
-        } else if (Array.isArray(processedForm[key])) {
-            // Handle arrays (like tags)
-            processedForm[key].forEach((item, index) => {
-                formData.append(`${key}[${index}]`, item);
-            });
-        } else {
-            formData.append(key, processedForm[key]);
-        }
-    });
-
+    // Tags are already in array format, no need to process them
     form.post(route("tasks.store"), {
-        data: formData,
-        headers: {
-            "Content-Type": "multipart/form-data",
-        },
+        forceFormData: true, // This ensures files are handled properly
         onSuccess: () => {
             router.visit(route("tasks.index"));
         },

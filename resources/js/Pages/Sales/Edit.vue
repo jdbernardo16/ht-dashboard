@@ -242,12 +242,19 @@ const props = defineProps({
     },
 });
 
+// Helper function to convert ISO datetime to date input format (YYYY-MM-DD)
+const formatDateForInput = (isoDate) => {
+    if (!isoDate) return "";
+    const date = new Date(isoDate);
+    return date.toISOString().split("T")[0];
+};
+
 const form = useForm({
     client_id: props.sale.client_id || "",
     product_name: props.sale.product_name || "",
     description: props.sale.description || "",
     amount: props.sale.amount || 0,
-    sale_date: props.sale.sale_date || "",
+    sale_date: formatDateForInput(props.sale.sale_date),
     status: props.sale.status || "pending",
     payment_method: props.sale.payment_method || "cash",
     notes: props.sale.notes || "",

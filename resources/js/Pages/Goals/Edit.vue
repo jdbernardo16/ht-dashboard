@@ -273,7 +273,7 @@ const form = useForm({
     labor_hours: props.goal.labor_hours || 0,
     quarter: props.goal.quarter || "Q1",
     year: props.goal.year || new Date().getFullYear(),
-    deadline: props.goal.deadline || "",
+    deadline: props.goal.deadline ? props.goal.deadline.split("T")[0] : "",
 });
 
 const submitForm = () => {

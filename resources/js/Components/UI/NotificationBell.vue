@@ -191,7 +191,7 @@
             >
                 <router-link
                     to="/notifications"
-                    class="block text-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    class="block text-center text-blue-600 hover:text-blue-800 text-sm font-medium cursor-pointer"
                     @click="showNotifications = false"
                 >
                     View all notifications

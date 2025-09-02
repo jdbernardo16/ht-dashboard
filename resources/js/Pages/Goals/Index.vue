@@ -286,7 +286,7 @@ const createGoal = () => {
 };
 
 const editGoal = (goal) => {
-    router.visit(`/goals/${sale.id}/edit`);
+    router.visit(`/goals/${goal.id}/edit`);
 };
 
 const viewGoal = (goal) => {
