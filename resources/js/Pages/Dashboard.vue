@@ -1,8 +1,7 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { Head } from "@inertiajs/vue3";
-import { computed, ref, onMounted, watch } from "vue";
-import axios from "axios";
+import { Head, router } from "@inertiajs/vue3";
+import { computed, ref } from "vue";
 
 // Dashboard Components
 import DashboardGrid from "@/Components/Dashboard/DashboardGrid.vue";
@@ -23,15 +22,25 @@ const props = defineProps({
         type: String,
         required: true,
     },
+    currentPeriod: {
+        type: String,
+        default: "daily",
+    },
+    currentStartDate: {
+        type: String,
+        default: "",
+    },
+    currentEndDate: {
+        type: String,
+        default: "",
+    },
 });
 
 // Time period state
-const selectedPeriod = ref("daily");
-const customStartDate = ref("");
-const customEndDate = ref("");
+const selectedPeriod = ref(props.currentPeriod);
+const customStartDate = ref(props.currentStartDate);
+const customEndDate = ref(props.currentEndDate);
 const dashboardData = ref(props.dashboardData);
-const loading = ref(false);
-const error = ref(null);
 
 // Computed properties for dashboard modules
 const dailySummary = computed(() => dashboardData.value.dailySummary);
@@ -43,33 +52,26 @@ const expenses = computed(() => dashboardData.value.expenses);
 const contentStats = computed(() => dashboardData.value.contentStats);
 const quarterlyGoals = computed(() => dashboardData.value.quarterlyGoals);
 
-// Fetch dashboard data based on time period
-const fetchDashboardData = async () => {
-    loading.value = true;
-    error.value = null;
+// Reload dashboard with new period parameters
+const reloadDashboard = () => {
+    const params = {
+        period: selectedPeriod.value,
+    };
 
-    try {
-        const params = {
-            period: selectedPeriod.value,
-        };
-
-        if (
-            selectedPeriod.value === "custom" &&
-            customStartDate.value &&
-            customEndDate.value
-        ) {
-            params.start_date = customStartDate.value;
-            params.end_date = customEndDate.value;
-        }
-
-        const response = await axios.get("/api/dashboard/data", { params });
-        dashboardData.value = response.data;
-    } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-        error.value = "Failed to load dashboard data. Please try again.";
-    } finally {
-        loading.value = false;
+    if (
+        selectedPeriod.value === "custom" &&
+        customStartDate.value &&
+        customEndDate.value
+    ) {
+        params.start_date = customStartDate.value;
+        params.end_date = customEndDate.value;
     }
+
+    router.visit(window.location.pathname, {
+        data: params,
+        preserveState: false,
+        preserveScroll: true,
+    });
 };
 
 // Handle period change from any module
@@ -84,28 +86,8 @@ const handlePeriodChange = (event) => {
         customEndDate.value = "";
     }
 
-    fetchDashboardData();
+    reloadDashboard();
 };
-
-// Watch for period changes
-watch(selectedPeriod, fetchDashboardData);
-
-// Initial data fetch on component mount
-onMounted(() => {
-    // Set default custom dates to current month if needed
-    if (
-        selectedPeriod.value === "custom" &&
-        !customStartDate.value &&
-        !customEndDate.value
-    ) {
-        const now = new Date();
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
-        customStartDate.value = firstDay.toISOString().split("T")[0];
-        customEndDate.value = lastDay.toISOString().split("T")[0];
-    }
-});
 </script>
 
 <template>
@@ -143,45 +125,30 @@ onMounted(() => {
                 margin-right: auto;
             "
         >
-            <!-- Loading and Error States -->
-            <div v-if="loading" class="text-center py-8">
-                <div
-                    class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"
-                ></div>
-                <p class="mt-2 text-gray-600">Loading dashboard data...</p>
-            </div>
-
-            <div v-else-if="error" class="text-center py-8 text-red-600">
-                <p>{{ error }}</p>
-                <button
-                    @click="fetchDashboardData"
-                    class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                    Retry
-                </button>
-            </div>
-
-            <div v-else>
+            <div>
                 <DashboardGrid>
                     <!-- Row 1 -->
                     <DailySummaryModule
                         :summary="dailySummary"
-                        :loading="loading"
-                        :error="error"
+                        :current-period="selectedPeriod"
+                        :current-start-date="customStartDate"
+                        :current-end-date="customEndDate"
                         style="height: 100%"
                         @period-change="handlePeriodChange"
                     />
                     <ActivityDistributionModule
                         :data="activityDistribution"
-                        :loading="loading"
-                        :error="error"
+                        :current-period="selectedPeriod"
+                        :current-start-date="customStartDate"
+                        :current-end-date="customEndDate"
                         style="height: 100%"
                         @period-change="handlePeriodChange"
                     />
                     <SalesModule
                         :data="salesMetrics"
-                        :loading="loading"
-                        :error="error"
+                        :current-period="selectedPeriod"
+                        :current-start-date="customStartDate"
+                        :current-end-date="customEndDate"
                         style="height: 100%"
                         @period-change="handlePeriodChange"
                     />
@@ -189,22 +156,25 @@ onMounted(() => {
                     <!-- Row 2 -->
                     <ExpensesModule
                         :data="expenses"
-                        :loading="loading"
-                        :error="error"
+                        :current-period="selectedPeriod"
+                        :current-start-date="customStartDate"
+                        :current-end-date="customEndDate"
                         style="height: 100%"
                         @period-change="handlePeriodChange"
                     />
                     <ContentModule
                         :data="contentStats"
-                        :loading="loading"
-                        :error="error"
+                        :current-period="selectedPeriod"
+                        :current-start-date="customStartDate"
+                        :current-end-date="customEndDate"
                         style="height: 100%"
                         @period-change="handlePeriodChange"
                     />
                     <QuarterlyGoalsModule
                         :data="quarterlyGoals"
-                        :loading="loading"
-                        :error="error"
+                        :current-period="selectedPeriod"
+                        :current-start-date="customStartDate"
+                        :current-end-date="customEndDate"
                         style="height: 100%"
                         @period-change="handlePeriodChange"
                     />

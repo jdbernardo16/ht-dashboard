@@ -810,10 +810,10 @@ const handleFileError = (errorMessage) => {
 
 const submitForm = () => {
     // Tags are already in array format, no need to process them
-    form.post(route("tasks.store"), {
+    form.post(route("tasks.web.store"), {
         forceFormData: true, // This ensures files are handled properly
         onSuccess: () => {
-            router.visit(route("tasks.index"));
+            router.visit(route("tasks.web.index"));
         },
         onError: (errors) => {
             console.error("Form errors:", errors);
@@ -822,6 +822,6 @@ const submitForm = () => {
 };
 
 const goBack = () => {
-    router.visit(route("tasks.index"));
+    router.visit(route("tasks.web.index"));
 };
 </script>

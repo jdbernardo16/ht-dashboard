@@ -14,6 +14,9 @@
                 </div>
                 <div v-if="showTimePeriod" class="time-period-container">
                     <TimePeriodDropdown
+                        :current-period="currentPeriod"
+                        :current-start-date="currentStartDate"
+                        :current-end-date="currentEndDate"
                         @period-change="$emit('period-change', $event)"
                     />
                 </div>
@@ -46,11 +49,17 @@ interface Props {
     description?: string;
     contentClass?: string;
     showTimePeriod?: boolean;
+    currentPeriod?: string;
+    currentStartDate?: string;
+    currentEndDate?: string;
 }
 
 withDefaults(defineProps<Props>(), {
     contentClass: "",
     showTimePeriod: false,
+    currentPeriod: "daily",
+    currentStartDate: "",
+    currentEndDate: "",
 });
 
 defineEmits(["period-change"]);

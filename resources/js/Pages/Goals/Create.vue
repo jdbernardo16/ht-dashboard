@@ -277,9 +277,9 @@ const submitForm = () => {
     loading.value = true;
     errors.value = {};
 
-    form.post(route("goals.store"), {
+    form.post(route("goals.web.store"), {
         onSuccess: () => {
-            router.visit(route("goals.index"));
+            router.visit(route("goals.web.index"));
         },
         onError: (error) => {
             errors.value = error;
@@ -291,6 +291,6 @@ const submitForm = () => {
 };
 
 const goBack = () => {
-    router.visit(route("goals.index"));
+    router.visit(route("goals.web.index"));
 };
 </script>

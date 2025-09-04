@@ -90,6 +90,7 @@
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
 import axios from "axios";
+import { createApiHeaders } from "@/Utils/utils";
 
 const props = defineProps({
     modelValue: {
@@ -151,6 +152,8 @@ const fetchSuggestions = async (query) => {
     try {
         const response = await axios.get("/api/clients/search", {
             params: { search: query },
+            headers: createApiHeaders(),
+            withCredentials: true,
         });
         suggestions.value = response.data;
     } catch (error) {
@@ -230,14 +233,22 @@ const handleAddNew = async () => {
     if (!props.allowCreate) return;
 
     try {
-        const response = await axios.post("/api/clients", {
-            first_name: searchQuery.value.split(" ")[0],
-            last_name:
-                searchQuery.value.split(" ").slice(1).join(" ") || "Customer",
-            email: `${searchQuery.value
-                .toLowerCase()
-                .replace(/\s+/g, ".")}@example.com`,
-        });
+        const response = await axios.post(
+            "/api/clients",
+            {
+                first_name: searchQuery.value.split(" ")[0],
+                last_name:
+                    searchQuery.value.split(" ").slice(1).join(" ") ||
+                    "Customer",
+                email: `${searchQuery.value
+                    .toLowerCase()
+                    .replace(/\s+/g, ".")}@example.com`,
+            },
+            {
+                headers: createApiHeaders(),
+                withCredentials: true,
+            }
+        );
 
         const newCustomer = response.data;
         selectedCustomer.value = newCustomer;

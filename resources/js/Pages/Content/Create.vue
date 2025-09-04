@@ -488,13 +488,13 @@ const submitForm = () => {
     });
 
     // Use FormData for the post request
-    form.post(route("content.store"), {
+    form.post(route("content.web.store"), {
         data: formData,
         headers: {
             "Content-Type": "multipart/form-data",
         },
         onSuccess: () => {
-            router.visit(route("content.index"));
+            router.visit(route("content.web.index"));
         },
         onError: (error) => {
             errors.value = error;
@@ -506,6 +506,6 @@ const submitForm = () => {
 };
 
 const goBack = () => {
-    router.visit(route("content.index"));
+    router.visit(route("content.web.index"));
 };
 </script>

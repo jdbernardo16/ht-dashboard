@@ -79,6 +79,15 @@
                         {{ item.estimated_hours || "-" }} hrs
                     </template>
                 </DataTable>
+
+                <!-- Pagination -->
+                <Pagination
+                    :links="props.tasks.links"
+                    :from="props.tasks.from"
+                    :to="props.tasks.to"
+                    :total="props.tasks.total"
+                    @navigate="handlePageChange"
+                />
             </div>
         </div>
 
@@ -103,6 +112,7 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import DataTable from "@/Components/DataTable.vue";
 import FormModal from "@/Components/FormModal.vue";
 import SearchFilter from "@/Components/SearchFilter.vue";
+import Pagination from "@/Components/Pagination.vue";
 
 // Props from controller
 const props = defineProps({
@@ -397,6 +407,14 @@ const clearFilters = () => {
         date_to: "",
     };
     fetchTasks();
+};
+
+const handlePageChange = (url) => {
+    router.visit(url, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ["tasks", "users", "goals", "filters"],
+    });
 };
 
 // Utility functions

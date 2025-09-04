@@ -58,8 +58,7 @@ class TaskController extends Controller
             });
         }
 
-        $tasks = $query->orderBy('priority', 'desc')
-            ->orderBy('due_date', 'asc')
+        $tasks = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 15));
 
         // Get users for dropdowns
@@ -398,8 +397,7 @@ class TaskController extends Controller
             $query->where('priority', $request->get('priority'));
         }
 
-        $tasks = $query->orderBy('priority', 'desc')
-            ->orderBy('due_date', 'asc')
+        $tasks = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 15));
 
         return Inertia::render('Tasks/MyTasks', [

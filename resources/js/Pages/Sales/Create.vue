@@ -254,9 +254,9 @@ const submitForm = () => {
     loading.value = true;
     errors.value = {};
 
-    form.post(route("sales.store"), {
+    form.post(route("sales.web.store"), {
         onSuccess: () => {
-            router.visit(route("sales.index"));
+            router.visit(route("sales.web.index"));
         },
         onError: (error) => {
             errors.value = error;
@@ -278,6 +278,6 @@ const handleClientCreate = (client) => {
 };
 
 const goBack = () => {
-    router.visit(route("sales.index"));
+    router.visit(route("sales.web.index"));
 };
 </script>

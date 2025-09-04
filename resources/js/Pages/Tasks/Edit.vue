@@ -947,14 +947,14 @@ const submitForm = () => {
         }
     });
 
-    form.put(route("tasks.update", props.task.id), {
+    form.put(route("tasks.web.update", props.task.id), {
         data: formData,
         preserveScroll: true,
         onSuccess: () => {
             // The backend redirects back to this page with success message
             // No need for additional redirect here
             console.log("Form submitted successfully");
-            router.visit(route("tasks.index"));
+            router.visit(route("tasks.web.index"));
         },
         onError: (errors) => {
             console.error("Form errors:", errors);
@@ -963,7 +963,7 @@ const submitForm = () => {
 };
 
 const goBack = () => {
-    router.visit(route("tasks.index"));
+    router.visit(route("tasks.web.index"));
 };
 
 // Utility functions for media handling
@@ -988,7 +988,10 @@ const removeExistingMedia = (mediaId) => {
     }
 
     router.delete(
-        route("tasks.media.destroy", { task: props.task.id, media: mediaId }),
+        route("tasks.web.media.destroy", {
+            task: props.task.id,
+            media: mediaId,
+        }),
         {
             preserveScroll: true,
             onSuccess: () => {

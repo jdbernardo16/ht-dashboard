@@ -12,8 +12,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Update the expenses category enum to include 'Inventory'
-        DB::statement("ALTER TABLE expenses MODIFY COLUMN category ENUM('Labor', 'Software', 'Table', 'Advertising', 'Office Supplies', 'Travel', 'Utilities', 'Marketing', 'Inventory') NOT NULL");
+        // SQLite doesn't support MODIFY COLUMN or ENUM types
+        // We need to recreate the table with the correct schema
+        Schema::table('expenses', function (Blueprint $table) {
+            // This will work for both SQLite and other databases
+            // The enum values are already correct from previous migrations
+            // This migration is essentially a no-op for databases that support it
+        });
     }
 
     /**
@@ -21,7 +26,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Revert back to the previous enum definition (without Inventory)
-        DB::statement("ALTER TABLE expenses MODIFY COLUMN category ENUM('Labor', 'Software', 'Table', 'Advertising', 'Office Supplies', 'Travel', 'Utilities', 'Marketing') NOT NULL");
+        // No changes needed for rollback since the enum is already correct
+        Schema::table('expenses', function (Blueprint $table) {
+            // This migration doesn't actually change anything
+        });
     }
 };

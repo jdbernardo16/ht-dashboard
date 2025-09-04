@@ -4,6 +4,9 @@
         :loading="loading"
         :error="error"
         :show-time-period="true"
+        :current-period="currentPeriod"
+        :current-start-date="currentStartDate"
+        :current-end-date="currentEndDate"
         @period-change="$emit('period-change', $event)"
     >
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -166,6 +169,18 @@ const props = defineProps({
     error: {
         type: String,
         default: null,
+    },
+    currentPeriod: {
+        type: String,
+        default: "daily",
+    },
+    currentStartDate: {
+        type: String,
+        default: "",
+    },
+    currentEndDate: {
+        type: String,
+        default: "",
     },
 });
 

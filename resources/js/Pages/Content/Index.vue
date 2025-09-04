@@ -85,6 +85,15 @@
                         {{ item.user?.name || "System" }}
                     </template>
                 </DataTable>
+
+                <!-- Pagination -->
+                <Pagination
+                    :links="contentPosts.links"
+                    :from="contentPosts.from"
+                    :to="contentPosts.to"
+                    :total="contentPosts.total"
+                    @navigate="handlePageChange"
+                />
             </div>
         </div>
 
@@ -109,7 +118,9 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import DataTable from "@/Components/DataTable.vue";
 import FormModal from "@/Components/FormModal.vue";
 import SearchFilter from "@/Components/SearchFilter.vue";
+import Pagination from "@/Components/Pagination.vue";
 import axios from "axios";
+import { createApiHeaders } from "@/Utils/utils";
 
 // Props from controller
 const props = defineProps({
@@ -265,7 +276,10 @@ const applyFilters = () => {
 
 const fetchCategories = async () => {
     try {
-        const response = await axios.get("/api/categories");
+        const response = await axios.get("/api/categories", {
+            headers: createApiHeaders(),
+            withCredentials: true,
+        });
         categories.value = response.data.data;
         // Update form fields with categories
         const categoryField = formFields.find((f) => f.name === "category_id");
@@ -321,6 +335,14 @@ const clearFilters = () => {
         date_to: "",
     };
     applyFilters();
+};
+
+const handlePageChange = (url) => {
+    router.visit(url, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ["contentPosts", "filters"],
+    });
 };
 
 // Utility functions

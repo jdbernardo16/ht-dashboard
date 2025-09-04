@@ -20,20 +20,28 @@ class DashboardController extends Controller
     /**
      * Display the dashboard with all module data
      *
+     * @param Request $request
      * @return Response
      */
-    public function dashboard(): Response
+    public function dashboard(Request $request): Response
     {
+        $period = $request->input('period', 'daily');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
         return Inertia::render('Dashboard', [
             'dashboardData' => [
-                'dailySummary' => $this->gatherDailySummary(),
-                'activityDistribution' => $this->gatherActivityDistribution(),
-                'salesMetrics' => $this->gatherSalesMetrics(),
-                'expenses' => $this->gatherExpenses(),
-                'contentStats' => $this->gatherContentStats(),
+                'dailySummary' => $this->gatherSummaryData($period, $startDate, $endDate),
+                'activityDistribution' => $this->gatherActivityDistributionData($period, $startDate, $endDate),
+                'salesMetrics' => $this->gatherSalesMetricsData($period, $startDate, $endDate),
+                'expenses' => $this->gatherExpensesData($period, $startDate, $endDate),
+                'contentStats' => $this->gatherContentStatsData($period, $startDate, $endDate),
                 'quarterlyGoals' => $this->gatherQuarterlyGoals(),
             ],
             'lastUpdated' => now()->toIso8601String(),
+            'currentPeriod' => $period,
+            'currentStartDate' => $startDate,
+            'currentEndDate' => $endDate,
         ]);
     }
 
@@ -868,6 +876,121 @@ class DashboardController extends Controller
             return 'in_progress';
         } else {
             return 'not_started';
+        }
+    }
+
+    /**
+     * Get date range based on period
+     */
+    private function getDateRange(string $period, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $now = Carbon::now();
+
+        switch ($period) {
+            case 'daily':
+                $start = $now->copy()->startOfDay();
+                $end = $now->copy()->endOfDay();
+                break;
+            case 'weekly':
+                $start = $now->copy()->startOfWeek();
+                $end = $now->copy()->endOfWeek();
+                break;
+            case 'monthly':
+                $start = $now->copy()->startOfMonth();
+                $end = $now->copy()->endOfMonth();
+                break;
+            case 'quarterly':
+                $start = $now->copy()->startOfQuarter();
+                $end = $now->copy()->endOfQuarter();
+                break;
+            case 'yearly':
+                $start = $now->copy()->startOfYear();
+                $end = $now->copy()->endOfYear();
+                break;
+            case 'custom':
+                $start = $startDate ? Carbon::parse($startDate)->startOfDay() : $now->copy()->startOfMonth();
+                $end = $endDate ? Carbon::parse($endDate)->endOfDay() : $now->copy()->endOfMonth();
+                break;
+            default:
+                $start = $now->copy()->startOfDay();
+                $end = $now->copy()->endOfDay();
+        }
+
+        return ['start' => $start, 'end' => $end];
+    }
+
+    /**
+     * Calculate target based on period
+     */
+    private function calculateTarget(string $period, float $currentRevenue): float
+    {
+        $baseDailyTarget = 5000;
+
+        switch ($period) {
+            case 'daily':
+                return $baseDailyTarget;
+            case 'weekly':
+                return $baseDailyTarget * 7;
+            case 'monthly':
+                return $baseDailyTarget * 30;
+            case 'quarterly':
+                return $baseDailyTarget * 90;
+            case 'yearly':
+                return $baseDailyTarget * 365;
+            case 'custom':
+                // For custom periods, use current revenue as target if it's higher, otherwise use base
+                return max($currentRevenue, $baseDailyTarget);
+            default:
+                return $baseDailyTarget;
+        }
+    }
+
+    /**
+     * Calculate budget based on period
+     */
+    private function calculateBudget(string $period, float $currentExpenses): float
+    {
+        $baseDailyBudget = 5000;
+
+        switch ($period) {
+            case 'daily':
+                return $baseDailyBudget;
+            case 'weekly':
+                return $baseDailyBudget * 7;
+            case 'monthly':
+                return $baseDailyBudget * 30;
+            case 'quarterly':
+                return $baseDailyBudget * 90;
+            case 'yearly':
+                return $baseDailyBudget * 365;
+            case 'custom':
+                // For custom periods, use current expenses as budget if it's higher, otherwise use base
+                return max($currentExpenses, $baseDailyBudget);
+            default:
+                return $baseDailyBudget;
+        }
+    }
+
+    /**
+     * Get period label for display
+     */
+    private function getPeriodLabel(string $period, Carbon $start, Carbon $end): string
+    {
+        switch ($period) {
+            case 'daily':
+                return 'Today';
+            case 'weekly':
+                return 'This Week';
+            case 'monthly':
+                return 'This Month';
+            case 'quarterly':
+                return 'This Quarter';
+            case 'yearly':
+                return 'This Year';
+            case 'custom':
+                return $start->format('M j, Y') . ' - ' . $end->format('M j, Y');
+            default:
+                return 'Today';
         }
     }
 }

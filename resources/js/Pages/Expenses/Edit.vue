@@ -351,7 +351,7 @@ const form = useForm({
 });
 
 const submitForm = () => {
-    form.put(route("expenses.update", props.expense.id), {
+    form.put(route("expenses.web.update", props.expense.id), {
         onSuccess: () => {
             // Redirect handled by controller
         },

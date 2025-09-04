@@ -48,7 +48,22 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
+
+const props = defineProps({
+    currentPeriod: {
+        type: String,
+        default: "daily",
+    },
+    currentStartDate: {
+        type: String,
+        default: "",
+    },
+    currentEndDate: {
+        type: String,
+        default: "",
+    },
+});
 
 const emit = defineEmits(["period-change"]);
 
@@ -97,8 +112,46 @@ const setDefaultCustomDates = () => {
     customEndDate.value = lastDay.toISOString().split("T")[0];
 };
 
-// Initialize default custom dates
-setDefaultCustomDates();
+// Initialize with current period from props
+onMounted(() => {
+    selectedPeriod.value = props.currentPeriod;
+    if (props.currentStartDate) {
+        customStartDate.value = props.currentStartDate;
+    }
+    if (props.currentEndDate) {
+        customEndDate.value = props.currentEndDate;
+    }
+    setDefaultCustomDates();
+});
+
+// Watch for changes in currentPeriod prop
+watch(
+    () => props.currentPeriod,
+    (newPeriod) => {
+        if (newPeriod && newPeriod !== selectedPeriod.value) {
+            selectedPeriod.value = newPeriod;
+        }
+    }
+);
+
+// Watch for changes in custom dates
+watch(
+    () => props.currentStartDate,
+    (newStartDate) => {
+        if (newStartDate && newStartDate !== customStartDate.value) {
+            customStartDate.value = newStartDate;
+        }
+    }
+);
+
+watch(
+    () => props.currentEndDate,
+    (newEndDate) => {
+        if (newEndDate && newEndDate !== customEndDate.value) {
+            customEndDate.value = newEndDate;
+        }
+    }
+);
 </script>
 
 <style scoped>
