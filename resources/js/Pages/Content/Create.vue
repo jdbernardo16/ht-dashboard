@@ -342,9 +342,37 @@
                                 </p>
                             </div>
 
+                            <!-- Image Upload -->
+                            <div>
+                                <InputLabel value="Upload Image" class="mb-2" />
+                                <FileUpload
+                                    v-model="form.image"
+                                    :multiple="false"
+                                    accept="image/*"
+                                    :maxFiles="1"
+                                    :maxSize="2 * 1024 * 1024"
+                                    title="Drag & drop image here or click to browse"
+                                    description="Supports JPG, PNG, GIF images (max 2MB)"
+                                    @error="handleFileError"
+                                />
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Upload a single image file. Supported
+                                    formats: JPG, PNG, GIF.
+                                </p>
+                                <p
+                                    v-if="errors.image"
+                                    class="mt-1 text-sm text-red-600"
+                                >
+                                    {{ errors.image }}
+                                </p>
+                            </div>
+
                             <!-- Media Upload -->
                             <div>
-                                <InputLabel value="Upload Files" class="mb-2" />
+                                <InputLabel
+                                    value="Upload Additional Files"
+                                    class="mb-2"
+                                />
                                 <FileUpload
                                     v-model="form.media"
                                     :multiple="true"
@@ -436,6 +464,7 @@ const form = useForm({
     content_type: "",
     description: "",
     content_url: "",
+    image: null,
     post_count: 1,
     scheduled_date: "",
     published_date: "",
@@ -468,12 +497,15 @@ const submitForm = () => {
     // Add all form fields
     Object.keys(form.data()).forEach((key) => {
         if (key === "media") {
-            // Handle file uploads
+            // Handle media file uploads (multiple files)
             form.media.forEach((file, index) => {
                 formData.append(`media[${index}]`, file);
             });
+        } else if (key === "image" && form.image instanceof File) {
+            // Handle single image file upload
+            formData.append(key, form.image);
         } else if (Array.isArray(form[key])) {
-            // Handle arrays (like platform and tags)
+            // Handle arrays (like platform)
             form[key].forEach((item, index) => {
                 formData.append(`${key}[${index}]`, item);
             });

@@ -69,6 +69,7 @@ class ContentPostController extends Controller
                 'platform' => $post->platform,
                 'content_type' => $post->content_type,
                 'content_url' => $post->content_url,
+                'image' => $post->image,
                 'post_count' => $post->post_count,
                 'scheduled_date' => $post->scheduled_date,
                 'published_date' => $post->published_date,
@@ -140,30 +141,40 @@ class ContentPostController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'content_url' => 'nullable|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB max for images
             'post_count' => 'nullable|integer|min:1',
             'scheduled_date' => 'nullable|date',
             'published_date' => 'nullable|date',
             'status' => 'required|in:draft,scheduled,published,archived',
             'content_category' => 'nullable|string|max:255',
-            'tags' => 'nullable|array',
+            'tags' => 'nullable',
+            'tags.*' => 'nullable|string',
             'notes' => 'nullable|string',
             'engagement_metrics' => 'nullable|array',
-            'media' => 'nullable|array',
-            'media.*' => 'file|mimes:jpg,jpeg,png,gif,pdf,doc,docx,txt|max:10240', // 10MB max
             'media' => 'nullable|array',
             'media.*' => 'file|mimes:jpg,jpeg,png,gif,pdf,doc,docx,txt|max:10240', // 10MB max
         ]);
 
         $validated['user_id'] = Auth::id();
 
+        // Remove image from validated data since it's a file upload
+        $image = $validated['image'] ?? null;
+        unset($validated['image']);
+
         $contentPost = ContentPost::create($validated);
+
+        // Process image upload if any
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('content_images', 'public');
+            $contentPost->update(['image' => $imagePath]);
+        }
 
         // Process media uploads if any
         if ($request->hasFile('media')) {
             $this->processMediaUploads($request, $contentPost);
         }
 
-        return redirect()->route('content.index')
+        return redirect()->route('content.web.index')
             ->with('success', 'Content post created successfully');
     }
 
@@ -184,6 +195,7 @@ class ContentPostController extends Controller
                 'platform' => $contentPost->platform,
                 'content_type' => $contentPost->content_type,
                 'content_url' => $contentPost->content_url,
+                'image' => $contentPost->image,
                 'post_count' => $contentPost->post_count,
                 'scheduled_date' => $contentPost->scheduled_date,
                 'published_date' => $contentPost->published_date,
@@ -230,7 +242,7 @@ class ContentPostController extends Controller
                 ];
             });
 
-        $contentPost->load(['user', 'client']);
+        $contentPost->load(['user', 'client', 'media']);
 
         return Inertia::render('Content/Edit', [
             'contentPost' => [
@@ -241,6 +253,7 @@ class ContentPostController extends Controller
                 'platform' => $contentPost->platform,
                 'content_type' => $contentPost->content_type,
                 'content_url' => $contentPost->content_url,
+                'image' => $contentPost->image,
                 'post_count' => $contentPost->post_count,
                 'scheduled_date' => $contentPost->scheduled_date,
                 'published_date' => $contentPost->published_date,
@@ -251,6 +264,24 @@ class ContentPostController extends Controller
                 'engagement_metrics' => $contentPost->engagement_metrics,
                 'engagement_rate' => $contentPost->engagement_rate,
                 'total_engagement' => $contentPost->total_engagement,
+                'client' => $contentPost->client ? [
+                    'id' => $contentPost->client->id,
+                    'name' => $contentPost->client->first_name . ' ' . $contentPost->client->last_name,
+                    'email' => $contentPost->client->email,
+                ] : null,
+                'media' => $contentPost->media->map(function ($media) {
+                    return [
+                        'id' => $media->id,
+                        'file_name' => $media->file_name,
+                        'file_path' => $media->file_path,
+                        'url' => $media->url,
+                        'mime_type' => $media->mime_type,
+                        'file_size' => $media->file_size,
+                        'original_name' => $media->original_name,
+                        'is_primary' => $media->is_primary,
+                        'order' => $media->order,
+                    ];
+                }),
             ],
             'clients' => $clients
         ]);
@@ -271,18 +302,44 @@ class ContentPostController extends Controller
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'content_url' => 'nullable|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB max for images
             'post_count' => 'nullable|integer|min:1',
             'scheduled_date' => 'nullable|date',
             'published_date' => 'nullable|date',
             'status' => 'sometimes|required|in:draft,scheduled,published,archived',
             'content_category' => 'nullable|string|max:255',
-            'tags' => 'nullable|array',
+            'tags' => 'nullable',
             'notes' => 'nullable|string',
             'engagement_metrics' => 'nullable|array',
         ]);
 
         $oldStatus = $contentPost->status;
+        
+        // Remove image from validated data since it's a file upload
+        $image = $validated['image'] ?? null;
+        unset($validated['image']);
+        
+        // Handle tags JSON string conversion
+        if (isset($validated['tags']) && is_string($validated['tags'])) {
+            try {
+                $validated['tags'] = json_decode($validated['tags'], true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                // If JSON decoding fails, treat as comma-separated string
+                $validated['tags'] = array_filter(array_map('trim', explode(',', $validated['tags'])));
+            }
+        }
+        
         $contentPost->update($validated);
+
+        // Process image upload if any
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($contentPost->image) {
+                Storage::disk('public')->delete($contentPost->image);
+            }
+            $imagePath = $request->file('image')->store('content_images', 'public');
+            $contentPost->update(['image' => $imagePath]);
+        }
 
         // Process media uploads if any
         if ($request->hasFile('media')) {
@@ -300,7 +357,7 @@ class ContentPostController extends Controller
             );
         }
 
-        return redirect()->route('content.index')
+        return redirect()->route('content.web.show', $contentPost->id)
             ->with('success', 'Content post updated successfully');
     }
 
@@ -313,7 +370,7 @@ class ContentPostController extends Controller
 
         $contentPost->delete();
 
-        return redirect()->route('content.index')
+        return redirect()->route('content.web.index')
             ->with('success', 'Content post deleted successfully');
     }
 

@@ -18,6 +18,7 @@ class ContentPost extends Model
         'title',
         'description',
         'content_url',
+        'image',
         'post_count',
         'scheduled_date',
         'published_date',

@@ -517,17 +517,38 @@ const deleteContentPost = () => {
 const goBack = () => router.visit("/content");
 
 /* ---- Utility Functions ---- */
-const formatPlatform = (platform) =>
-    ({
-        facebook: "Facebook",
-        instagram: "Instagram",
-        twitter: "Twitter",
-        linkedin: "LinkedIn",
-        tiktok: "TikTok",
-        youtube: "YouTube",
-        pinterest: "Pinterest",
-        other: "Other",
-    }[platform] || platform);
+const formatPlatform = (platform) => {
+    if (Array.isArray(platform)) {
+        return platform
+            .map(
+                (p) =>
+                    ({
+                        facebook: "Facebook",
+                        instagram: "Instagram",
+                        twitter: "Twitter",
+                        linkedin: "LinkedIn",
+                        tiktok: "TikTok",
+                        youtube: "YouTube",
+                        pinterest: "Pinterest",
+                        other: "Other",
+                    }[p] || p)
+            )
+            .join(", ");
+    }
+
+    return (
+        {
+            facebook: "Facebook",
+            instagram: "Instagram",
+            twitter: "Twitter",
+            linkedin: "LinkedIn",
+            tiktok: "TikTok",
+            youtube: "YouTube",
+            pinterest: "Pinterest",
+            other: "Other",
+        }[platform] || platform
+    );
+};
 
 const formatContentType = (type) =>
     ({
