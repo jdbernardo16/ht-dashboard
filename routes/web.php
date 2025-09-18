@@ -78,6 +78,17 @@ Route::middleware(['auth', 'verified'])->prefix('sales')->group(function () {
     Route::delete('/{sale}', [SalesController::class, 'destroy'])->name('sales.web.destroy');
 });
 
+// Client Routes
+Route::middleware(['auth', 'verified'])->prefix('clients')->group(function () {
+    Route::get('/', [\App\Http\Controllers\ClientController::class, 'index'])->name('clients.web.index');
+    Route::get('/create', [\App\Http\Controllers\ClientController::class, 'create'])->name('clients.web.create');
+    Route::post('/', [\App\Http\Controllers\ClientController::class, 'store'])->name('clients.web.store');
+    Route::get('/{client}', [\App\Http\Controllers\ClientController::class, 'show'])->name('clients.web.show');
+    Route::get('/{client}/edit', [\App\Http\Controllers\ClientController::class, 'edit'])->name('clients.web.edit');
+    Route::put('/{client}', [\App\Http\Controllers\ClientController::class, 'update'])->name('clients.web.update');
+    Route::delete('/{client}', [\App\Http\Controllers\ClientController::class, 'destroy'])->name('clients.web.destroy');
+});
+
 // Content Routes
 Route::middleware(['auth', 'verified'])->prefix('content')->group(function () {
     Route::get('/', [ContentPostController::class, 'index'])->name('content.web.index');

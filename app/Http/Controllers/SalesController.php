@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Sale;
 use App\Models\User;
+use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -84,11 +85,17 @@ class SalesController extends Controller
     {
         Gate::authorize('create', Sale::class);
 
-        $clients = User::where('role', 'client')
-            ->select('id', 'first_name', 'last_name', 'email')
+        $clients = \App\Models\Client::select('id', 'first_name', 'last_name', 'email')
             ->orderBy('first_name')
             ->orderBy('last_name')
-            ->get();
+            ->get()
+            ->map(function ($client) {
+                return [
+                    'id' => $client->id,
+                    'name' => $client->first_name . ' ' . $client->last_name,
+                    'email' => $client->email
+                ];
+            });
 
         return Inertia::render('Sales/Create', [
             'clients' => $clients
@@ -103,7 +110,7 @@ class SalesController extends Controller
         Gate::authorize('create', Sale::class);
 
         $validated = $request->validate([
-            'client_id' => 'required|exists:users,id',
+            'client_id' => 'required|exists:clients,id',
             'product_name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'amount' => 'required|numeric|min:0',
@@ -154,22 +161,8 @@ class SalesController extends Controller
     {
         Gate::authorize('update', $sale);
 
-        $clients = User::where('role', 'client')
-            ->select('id', 'first_name', 'last_name', 'email')
-            ->orderBy('first_name')
-            ->orderBy('last_name')
-            ->get()
-            ->map(function ($client) {
-                return [
-                    'id' => $client->id,
-                    'name' => $client->first_name . ' ' . $client->last_name,
-                    'email' => $client->email
-                ];
-            });
-
         return Inertia::render('Sales/Edit', [
-            'sale' => $sale->load(['user', 'client']),
-            'clients' => $clients
+            'sale' => $sale->load(['user', 'client'])
         ]);
     }
 
@@ -230,13 +223,7 @@ class SalesController extends Controller
 
         $search = $request->get('search', '');
 
-        $clients = User::where('role', 'client')
-            ->where(function ($query) use ($search) {
-                $query->where('first_name', 'like', "%{$search}%")
-                    ->orWhere('last_name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
-            })
+        $clients = Client::search($search)
             ->select('id', 'first_name', 'last_name', 'email')
             ->orderBy('first_name')
             ->orderBy('last_name')
@@ -245,7 +232,7 @@ class SalesController extends Controller
             ->map(function ($client) {
                 return [
                     'id' => $client->id,
-                    'name' => $client->first_name . ' ' . $client->last_name,
+                    'name' => $client->full_name,
                     'email' => $client->email
                 ];
             });
@@ -263,20 +250,18 @@ class SalesController extends Controller
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => 'required|email|unique:clients,email',
         ]);
 
-        $client = User::create([
+        $client = Client::create([
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
             'email' => $validated['email'],
-            'role' => 'client',
-            'password' => bcrypt(Str::random(12)), // Generate random password
         ]);
 
         return response()->json([
             'id' => $client->id,
-            'name' => $client->first_name . ' ' . $client->last_name,
+            'name' => $client->full_name,
             'email' => $client->email
         ], 201);
     }

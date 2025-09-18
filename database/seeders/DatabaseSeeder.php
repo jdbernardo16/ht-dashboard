@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             SalesSeeder::class,
             ExpenseSeeder::class,
             TaskSeeder::class,
+            ClientSeeder::class,
             ContentPostSeeder::class,
             GoalSeeder::class,
         ]);

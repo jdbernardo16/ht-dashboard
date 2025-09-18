@@ -89,8 +89,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
-import axios from "axios";
-import { createApiHeaders } from "@/Utils/utils";
+import { router } from "@inertiajs/vue3";
 
 const props = defineProps({
     modelValue: {
@@ -150,15 +149,18 @@ const fetchSuggestions = async (query) => {
 
     loading.value = true;
     try {
-        const response = await axios.get("/api/clients/search", {
-            params: { search: query },
-            headers: createApiHeaders(),
-            withCredentials: true,
+        const response = await router.get("/api/clients/search", {
+            search: query,
         });
         suggestions.value = response.data;
     } catch (error) {
         console.error("Error fetching suggestions:", error);
         suggestions.value = [];
+        // Inertia will handle authentication errors automatically
+        if (error.response?.status === 401) {
+            // Session expired or unauthenticated - Inertia will redirect to login
+            showSuggestions.value = false;
+        }
     } finally {
         loading.value = false;
     }
@@ -231,24 +233,13 @@ const selectSuggestion = (suggestion) => {
 // Handle adding a new customer
 const handleAddNew = async () => {
     if (!props.allowCreate) return;
-
     try {
-        const response = await axios.post(
-            "/api/clients",
-            {
-                first_name: searchQuery.value.split(" ")[0],
-                last_name:
-                    searchQuery.value.split(" ").slice(1).join(" ") ||
-                    "Customer",
-                email: `${searchQuery.value
-                    .toLowerCase()
-                    .replace(/\s+/g, ".")}@example.com`,
-            },
-            {
-                headers: createApiHeaders(),
-                withCredentials: true,
-            }
-        );
+        const response = await router.post("/api/clients", {
+            first_name: searchQuery.value.split(" ")[0],
+            last_name:
+                searchQuery.value.split(" ").slice(1).join(" ") || "Customer",
+            email: null, // Don't generate dummy email - let backend handle validation
+        });
 
         const newCustomer = response.data;
         selectedCustomer.value = newCustomer;
@@ -260,7 +251,24 @@ const handleAddNew = async () => {
         suggestions.value = [];
     } catch (error) {
         console.error("Error creating customer:", error);
-        alert("Failed to create new customer. Please try again.");
+
+        // Handle specific error cases
+        if (error.response?.status === 422) {
+            // Validation errors from backend
+            const errors = error.response.data.errors;
+            if (errors.email) {
+                alert(
+                    "Please provide a valid email address for the new customer."
+                );
+            } else {
+                alert("Please check the customer information and try again.");
+            }
+        } else if (error.response?.status === 401) {
+            // Authentication error - Inertia will handle redirect
+            showSuggestions.value = false;
+        } else {
+            alert("Failed to create new customer. Please try again.");
+        }
     }
 };
 

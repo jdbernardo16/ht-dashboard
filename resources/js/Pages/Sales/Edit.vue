@@ -236,10 +236,6 @@ const props = defineProps({
         type: Object,
         required: true,
     },
-    clients: {
-        type: Array,
-        required: true,
-    },
 });
 
 // Helper function to convert ISO datetime to date input format (YYYY-MM-DD)

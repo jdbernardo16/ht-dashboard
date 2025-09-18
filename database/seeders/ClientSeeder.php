@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
+use App\Models\Client;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class ClientSeeder extends Seeder
 {
@@ -16,54 +15,49 @@ class ClientSeeder extends Seeder
         // Create sample clients
         $clients = [
             [
-                'full_name' => 'John Doe',
                 'first_name' => 'John',
                 'last_name' => 'Doe',
                 'email' => 'john.doe@example.com',
-                'role' => 'client',
-                'email_verified_at' => now(),
-                'password' => Hash::make('password'),
+                'phone' => '+1-555-0101',
+                'address' => '123 Main St, Anytown, USA',
+                'company' => 'Doe Enterprises',
             ],
             [
-                'full_name' => 'Jane Smith',
                 'first_name' => 'Jane',
                 'last_name' => 'Smith',
                 'email' => 'jane.smith@example.com',
-                'role' => 'client',
-                'email_verified_at' => now(),
-                'password' => Hash::make('password'),
+                'phone' => '+1-555-0102',
+                'address' => '456 Oak Ave, Somewhere, USA',
+                'company' => 'Smith & Co',
             ],
             [
-                'full_name' => 'Michael Johnson',
                 'first_name' => 'Michael',
                 'last_name' => 'Johnson',
                 'email' => 'michael.johnson@example.com',
-                'role' => 'client',
-                'email_verified_at' => now(),
-                'password' => Hash::make('password'),
+                'phone' => '+1-555-0103',
+                'address' => '789 Pine Rd, Nowhere, USA',
+                'company' => 'Johnson Industries',
             ],
             [
-                'full_name' => 'Sarah Williams',
                 'first_name' => 'Sarah',
                 'last_name' => 'Williams',
                 'email' => 'sarah.williams@example.com',
-                'role' => 'client',
-                'email_verified_at' => now(),
-                'password' => Hash::make('password'),
+                'phone' => '+1-555-0104',
+                'address' => '321 Elm St, Anycity, USA',
+                'company' => 'Williams Group',
             ],
             [
-                'full_name' => 'David Brown',
                 'first_name' => 'David',
                 'last_name' => 'Brown',
                 'email' => 'david.brown@example.com',
-                'role' => 'client',
-                'email_verified_at' => now(),
-                'password' => Hash::make('password'),
+                'phone' => '+1-555-0105',
+                'address' => '654 Maple Dr, Somecity, USA',
+                'company' => 'Brown Corporation',
             ],
         ];
 
         foreach ($clients as $client) {
-            User::create($client);
+            Client::create($client);
         }
     }
 }

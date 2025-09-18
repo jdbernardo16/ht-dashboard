@@ -76,7 +76,6 @@ class ContentPost extends Model
                         'results' => $deleteResults
                     ]);
                 }
-
             } catch (\Exception $e) {
                 Log::error('Failed to clean up images during ContentPost deletion', [
                     'content_post_id' => $contentPost->id,
@@ -95,7 +94,7 @@ class ContentPost extends Model
 
     public function client()
     {
-        return $this->belongsTo(User::class, 'client_id');
+        return $this->belongsTo(Client::class);
     }
 
     public function category()

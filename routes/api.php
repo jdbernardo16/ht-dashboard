@@ -38,12 +38,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Users API routes
     Route::apiResource('users', \App\Http\Controllers\UserController::class);
 
+    // Clients API routes
+    Route::apiResource('clients', \App\Http\Controllers\ClientController::class);
+
     // Categories API routes
     Route::apiResource('categories', \App\Http\Controllers\CategoryController::class);
 
-    // Client search and creation API routes
-    Route::get('/clients/search', [\App\Http\Controllers\SalesController::class, 'searchClients'])->name('clients.search');
-    Route::post('/clients', [\App\Http\Controllers\SalesController::class, 'createClient'])->name('clients.create');
+    // Client search for autocomplete functionality
+    Route::get('/clients/search', [\App\Http\Controllers\ClientController::class, 'search'])->name('clients.search');
 
     // Dashboard API routes
     Route::get('/dashboard/data', [\App\Http\Controllers\DashboardController::class, 'getDashboardData'])->name('dashboard.data');

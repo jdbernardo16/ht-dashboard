@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Client;
 use App\Models\ContentPost;
 use App\Models\Sale;
 use App\Models\Task;
+use App\Policies\ClientPolicy;
 use App\Policies\ContentPostPolicy;
 use App\Policies\SalePolicy;
 use App\Policies\TaskPolicy;
@@ -27,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::policy(Client::class, ClientPolicy::class);
         Gate::policy(Task::class, TaskPolicy::class);
         Gate::policy(Sale::class, SalePolicy::class);
         Gate::policy(ContentPost::class, ContentPostPolicy::class);
