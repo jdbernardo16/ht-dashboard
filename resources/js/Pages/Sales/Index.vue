@@ -53,9 +53,13 @@
                 </DataTable>
 
                 <!-- Pagination -->
-                <div class="mt-4">
-                    <Pagination :links="paginationLinks" />
-                </div>
+                <Pagination
+                    :links="props.sales.links"
+                    :from="props.sales.from"
+                    :to="props.sales.to"
+                    :total="props.sales.total"
+                    @navigate="handlePageChange"
+                />
             </div>
         </div>
     </AuthenticatedLayout>
@@ -67,6 +71,7 @@ import { router } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import DataTable from "@/Components/DataTable.vue";
 import SearchFilter from "@/Components/SearchFilter.vue";
+import Pagination from "@/Components/Pagination.vue";
 
 // Props from server
 const props = defineProps({
@@ -97,7 +102,6 @@ const filters = ref({
 
 // Computed properties
 const sales = computed(() => props.sales.data || []);
-const paginationLinks = computed(() => props.sales.links || []);
 
 // Table columns
 const columns = [
@@ -196,6 +200,14 @@ const clearFilters = () => {
         max_amount: "",
     };
     applyFilters();
+};
+
+const handlePageChange = (url) => {
+    router.visit(url, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ["sales", "clients", "filters"],
+    });
 };
 
 // Utility functions

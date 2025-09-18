@@ -467,10 +467,17 @@ const formatTags = (tags) => {
     if (!tags) return [];
     if (Array.isArray(tags)) return tags;
     if (typeof tags === "string") {
-        return tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter((tag) => tag);
+        try {
+            // Try to parse as JSON first (in case it's a JSON string)
+            const parsed = JSON.parse(tags);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            // If JSON parsing fails, treat as comma-separated string
+            return tags
+                .split(",")
+                .map((tag) => tag.trim())
+                .filter((tag) => tag);
+        }
     }
     return [];
 };
@@ -478,6 +485,7 @@ const formatTags = (tags) => {
 const getStatusClass = (status) => {
     const classes = {
         pending: "bg-yellow-100 text-yellow-800",
+        not_started: "bg-gray-100 text-gray-800",
         in_progress: "bg-blue-100 text-blue-800",
         completed: "bg-green-100 text-green-800",
         cancelled: "bg-red-100 text-red-800",
@@ -497,7 +505,7 @@ const getPriorityClass = (priority) => {
 
 const getProgressPercentage = (task) => {
     if (task.status === "completed") return 100;
-    if (task.status === "cancelled") return 0;
+    if (task.status === "cancelled" || task.status === "not_started") return 0;
 
     const estimated = parseFloat(task.estimated_hours) || 0;
     const actual = parseFloat(task.actual_hours) || 0;

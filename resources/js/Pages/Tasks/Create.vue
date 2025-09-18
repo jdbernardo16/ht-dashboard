@@ -130,6 +130,9 @@
                                             <option value="pending">
                                                 Pending
                                             </option>
+                                            <option value="not_started">
+                                                Not Started
+                                            </option>
                                             <option value="in_progress">
                                                 In Progress
                                             </option>
@@ -343,33 +346,168 @@
                                 <div>
                                     <InputLabel for="tags" value="Tags" />
                                     <div class="mt-1">
-                                        <input
-                                            type="text"
-                                            v-model="tagInput"
-                                            @keyup.enter="addTag"
-                                            @keyup.space="addTag"
-                                            @keyup.188="addTag"
-                                            placeholder="Type a tag and press Enter or comma"
-                                            class="block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                        />
-                                        <div class="mt-2 flex flex-wrap gap-2">
-                                            <span
-                                                v-for="(
-                                                    tag, index
-                                                ) in form.tags"
-                                                :key="index"
-                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                                        <!-- Tag Input Container -->
+                                        <div class="relative">
+                                            <div
+                                                class="flex flex-wrap items-center gap-2 p-2 border border-gray-300 rounded-md shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 min-h-12 transition-colors"
+                                                :class="{
+                                                    'border-red-500':
+                                                        form.errors.tags,
+                                                    'bg-gray-50':
+                                                        isTagInputFocused,
+                                                }"
+                                                @click="focusTagInput"
                                             >
-                                                {{ tag }}
-                                                <button
-                                                    type="button"
-                                                    @click="removeTag(index)"
-                                                    class="ml-1 text-indigo-600 hover:text-indigo-800"
+                                                <!-- Existing Tags -->
+                                                <span
+                                                    v-for="(
+                                                        tag, index
+                                                    ) in currentTagsArray"
+                                                    :key="index"
+                                                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200 transition-all hover:bg-indigo-200 hover:scale-105"
                                                 >
-                                                    ×
+                                                    {{ tag.trim() }}
+                                                    <button
+                                                        type="button"
+                                                        @click.stop="
+                                                            removeTag(index)
+                                                        "
+                                                        class="text-indigo-600 hover:text-indigo-800 focus:outline-none transition-colors"
+                                                        title="Remove tag"
+                                                    >
+                                                        <svg
+                                                            class="h-4 w-4"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                stroke-linecap="round"
+                                                                stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M6 18L18 6M6 6l12 12"
+                                                            ></path>
+                                                        </svg>
+                                                    </button>
+                                                </span>
+
+                                                <!-- Tag Input Field -->
+                                                <input
+                                                    ref="tagInputRef"
+                                                    type="text"
+                                                    v-model="tagInput"
+                                                    @keydown="
+                                                        handleTagInputKeydown
+                                                    "
+                                                    @focus="
+                                                        isTagInputFocused = true
+                                                    "
+                                                    @blur="
+                                                        isTagInputFocused = false
+                                                    "
+                                                    @input="
+                                                        updateCurrentTagPreview
+                                                    "
+                                                    placeholder="Type to add tags..."
+                                                    class="flex-1 min-w-0 bg-transparent border-none outline-none py-1 px-2 text-sm placeholder-gray-400"
+                                                    :class="{
+                                                        'opacity-50':
+                                                            form.processing,
+                                                    }"
+                                                    :disabled="form.processing"
+                                                />
+
+                                                <!-- Add Tag Button -->
+                                                <button
+                                                    v-if="tagInput.trim()"
+                                                    type="button"
+                                                    @click.prevent.stop="
+                                                        addTagFromButton
+                                                    "
+                                                    class="text-indigo-600 hover:text-indigo-800 focus:outline-none transition-colors p-1 rounded"
+                                                    title="Add tag"
+                                                    :disabled="form.processing"
+                                                >
+                                                    <svg
+                                                        class="h-5 w-5"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                                        ></path>
+                                                    </svg>
                                                 </button>
-                                            </span>
+                                            </div>
+
+                                            <!-- Current Tag Preview -->
+                                            <div
+                                                v-if="currentTagPreview"
+                                                class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 p-2"
+                                            >
+                                                <div
+                                                    class="text-sm text-gray-600 flex items-center justify-between"
+                                                >
+                                                    <span
+                                                        >Press Enter or Comma to
+                                                        add:</span
+                                                    >
+                                                    <span
+                                                        class="font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded"
+                                                    >
+                                                        {{ currentTagPreview }}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
+
+                                        <!-- Tag Suggestions (if any) -->
+                                        <div
+                                            v-if="tagSuggestions.length > 0"
+                                            class="mt-1 p-2 bg-gray-50 border border-gray-200 rounded-md"
+                                        >
+                                            <p
+                                                class="text-xs text-gray-500 mb-1"
+                                            >
+                                                Common tags:
+                                            </p>
+                                            <div class="flex flex-wrap gap-1">
+                                                <span
+                                                    v-for="(
+                                                        suggestion, index
+                                                    ) in tagSuggestions"
+                                                    :key="index"
+                                                    @click="
+                                                        addSuggestion(
+                                                            suggestion
+                                                        )
+                                                    "
+                                                    class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors cursor-pointer inline-block"
+                                                    role="button"
+                                                    tabindex="0"
+                                                    @keydown.enter="
+                                                        addSuggestion(
+                                                            suggestion
+                                                        )
+                                                    "
+                                                    @keydown.space.prevent="
+                                                        addSuggestion(
+                                                            suggestion
+                                                        )
+                                                    "
+                                                >
+                                                    {{ suggestion }}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <p class="mt-1 text-xs text-gray-500">
+                                            Press Enter or Comma to add tags.
+                                        </p>
                                     </div>
                                     <InputError
                                         :message="form.errors.tags"
@@ -393,6 +531,41 @@
                                         :message="form.errors.notes"
                                         class="mt-2"
                                     />
+                                </div>
+                            </div>
+
+                            <!-- File Attachments -->
+                            <div class="border-b border-gray-200 pb-6">
+                                <h3
+                                    class="text-lg font-medium text-gray-900 mb-4"
+                                >
+                                    File Attachments
+                                </h3>
+
+                                <div>
+                                    <InputLabel
+                                        value="Upload Files"
+                                        class="mb-2"
+                                    />
+                                    <FileUpload
+                                        v-model="form.media"
+                                        :multiple="true"
+                                        accept="image/*,.pdf,.doc,.docx,.txt"
+                                        :maxFiles="10"
+                                        :maxSize="10 * 1024 * 1024"
+                                        title="Drag & drop files here or click to browse"
+                                        description="Supports images, PDFs, and documents (max 10MB each)"
+                                        @error="handleFileError"
+                                    />
+                                    <InputError
+                                        :message="form.errors.media"
+                                        class="mt-2"
+                                    />
+                                    <p class="text-xs text-gray-500 mt-2">
+                                        You can upload up to 10 files. Supported
+                                        formats: JPG, PNG, GIF, PDF, DOC, DOCX,
+                                        TXT.
+                                    </p>
                                 </div>
                             </div>
 
@@ -493,13 +666,14 @@
 <script setup>
 import { useForm } from "@inertiajs/vue3";
 import { router } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
 import TextInput from "@/Components/TextInput.vue";
+import FileUpload from "@/Components/UI/FileUpload.vue";
 
 // Props
 const props = defineProps({
@@ -526,35 +700,120 @@ const form = useForm({
     category: "",
     estimated_hours: null,
     actual_hours: null,
-    tags: "",
+    tags: [],
     notes: "",
     parent_task_id: null,
     related_goal_id: "",
     is_recurring: false,
     recurring_frequency: "",
+    media: [],
 });
 
 // Computed properties
 const users = computed(() => props.users);
 const goals = computed(() => props.goals);
 
-// Methods
-const submitForm = () => {
-    // Process tags
-    const processedForm = {
-        ...form.data(),
-        tags: form.tags
-            ? form.tags
-                  .split(",")
-                  .map((tag) => tag.trim())
-                  .filter((tag) => tag)
-            : [],
-    };
+// Enhanced Tag Handling
+const tagInput = ref("");
+const tagInputRef = ref(null);
+const isTagInputFocused = ref(false);
+const currentTagPreview = ref("");
+const tagSuggestions = ref([
+    "urgent",
+    "important",
+    "follow-up",
+    "review",
+    "meeting",
+    "documentation",
+]);
 
-    form.post(route("tasks.store"), {
-        data: processedForm,
+// Computed properties
+const currentTagsArray = computed(() => {
+    if (Array.isArray(form.tags)) {
+        return form.tags.filter((tag) => tag && tag.trim());
+    }
+    return [];
+});
+
+// Methods
+const focusTagInput = () => {
+    if (tagInputRef.value) {
+        tagInputRef.value.focus();
+    }
+};
+
+const updateCurrentTagPreview = () => {
+    const tagText = tagInput.value.trim();
+    currentTagPreview.value = tagText;
+};
+
+const handleTagInputKeydown = (event) => {
+    const tagText = tagInput.value.trim();
+
+    if (event.key === "Enter" || event.key === "," || event.keyCode === 188) {
+        event.preventDefault();
+        if (tagText) {
+            addTag(tagText);
+        }
+    } else if (
+        event.key === "Backspace" &&
+        !tagText &&
+        currentTagsArray.value.length > 0
+    ) {
+        // Remove last tag when backspace is pressed on empty input
+        event.preventDefault();
+        removeTag(currentTagsArray.value.length - 1);
+    }
+};
+
+const addTagFromButton = (event) => {
+    // Explicitly prevent any form submission
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    const tagText = tagInput.value.trim();
+    if (tagText) {
+        addTag(tagText);
+    }
+};
+
+const addTag = (tagText) => {
+    if (!tagText) return;
+
+    const trimmedTag = tagText.trim();
+    if (!trimmedTag) return;
+
+    // Add new tag if it doesn't already exist
+    if (!form.tags.includes(trimmedTag)) {
+        form.tags.push(trimmedTag);
+    }
+
+    // Clear input and reset preview
+    tagInput.value = "";
+    currentTagPreview.value = "";
+};
+
+const removeTag = (index) => {
+    // Remove tag at index
+    if (index >= 0 && index < form.tags.length) {
+        form.tags.splice(index, 1);
+    }
+};
+
+const addSuggestion = (suggestion) => {
+    addTag(suggestion);
+};
+
+const handleFileError = (errorMessage) => {
+    // You could show a toast notification here
+    console.error("File upload error:", errorMessage);
+};
+
+const submitForm = () => {
+    // Tags are already in array format, no need to process them
+    form.post(route("tasks.web.store"), {
+        forceFormData: true, // This ensures files are handled properly
         onSuccess: () => {
-            router.visit(route("tasks.index"));
+            router.visit(route("tasks.web.index"));
         },
         onError: (errors) => {
             console.error("Form errors:", errors);
@@ -563,6 +822,6 @@ const submitForm = () => {
 };
 
 const goBack = () => {
-    router.visit(route("tasks.index"));
+    router.visit(route("tasks.web.index"));
 };
 </script>

@@ -328,15 +328,15 @@ const props = defineProps({
 });
 
 const editExpense = () => {
-    router.visit(route("expenses.edit", props.expense.id));
+    router.visit(route("expenses.web.edit", props.expense.id));
 };
 
 const deleteExpense = () => {
     if (confirm("Are you sure you want to delete this expense?")) {
-        router.delete(route("expenses.destroy", props.expense.id), {
+        router.delete(route("expenses.web.destroy", props.expense.id), {
             preserveScroll: true,
             onSuccess: () => {
-                router.visit(route("expenses.index"));
+                router.visit(route("expenses.web.index"));
             },
         });
     }

@@ -1,5 +1,14 @@
 <template>
-    <DashboardModule title="Sales Overview" :loading="loading" :error="error">
+    <DashboardModule
+        title="Sales Overview"
+        :loading="loading"
+        :error="error"
+        :show-time-period="true"
+        :current-period="currentPeriod"
+        :current-start-date="currentStartDate"
+        :current-end-date="currentEndDate"
+        @period-change="$emit('period-change', $event)"
+    >
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Revenue Chart -->
             <div class="bg-white rounded-lg p-6 border">
@@ -51,9 +60,12 @@
                             </div>
                         </div>
                         <div class="mt-2">
-                            <span class="text-sm text-green-600 font-medium"
-                                >+{{ sales.growth }}%</span
+                            <span
+                                :class="salesGrowth.colorClass"
+                                class="text-sm font-medium"
                             >
+                                {{ salesGrowth.formatted }}
+                            </span>
                             <span class="text-sm text-gray-500">
                                 from last month</span
                             >
@@ -87,9 +99,12 @@
                             </div>
                         </div>
                         <div class="mt-2">
-                            <span class="text-sm text-blue-600 font-medium"
-                                >+{{ sales.customerGrowth }}%</span
+                            <span
+                                :class="customerGrowth.colorClass"
+                                class="text-sm font-medium"
                             >
+                                {{ customerGrowth.formatted }}
+                            </span>
                             <span class="text-sm text-gray-500">
                                 from last month</span
                             >
@@ -218,6 +233,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { Chart, registerables } from "chart.js";
 import DashboardModule from "./DashboardModule.vue";
+import { formatPercentageWithColor } from "../../Utils/utils.js";
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -245,7 +261,21 @@ const props = defineProps({
         type: String,
         default: null,
     },
+    currentPeriod: {
+        type: String,
+        default: "daily",
+    },
+    currentStartDate: {
+        type: String,
+        default: "",
+    },
+    currentEndDate: {
+        type: String,
+        default: "",
+    },
 });
+
+defineEmits(["period-change"]);
 
 const revenueChartRef = ref(null);
 let chartInstance = null;
@@ -312,6 +342,14 @@ const sales = computed(() => {
         })),
         recentSales: [], // We don't have recent sales data in the current structure
     };
+});
+// Computed properties for percentage formatting
+const salesGrowth = computed(() => {
+    return formatPercentageWithColor(sales.value.growth);
+});
+
+const customerGrowth = computed(() => {
+    return formatPercentageWithColor(sales.value.customerGrowth);
 });
 
 const createChart = () => {

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Models\TaskMedia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class TaskController extends Controller
@@ -56,8 +58,7 @@ class TaskController extends Controller
             });
         }
 
-        $tasks = $query->orderBy('priority', 'desc')
-            ->orderBy('due_date', 'asc')
+        $tasks = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 15));
 
         // Get users for dropdowns
@@ -85,29 +86,53 @@ class TaskController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|in:low,medium,high,urgent',
-            'status' => 'required|in:pending,in_progress,completed,cancelled',
+            'status' => 'required|in:pending,in_progress,completed,cancelled,not_started',
             'due_date' => 'required|date',
             'assigned_to' => 'nullable|exists:users,id',
             'category' => 'nullable|string|max:100',
             'estimated_hours' => 'nullable|numeric|min:0',
             'actual_hours' => 'nullable|numeric|min:0',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:50',
+            'tags' => 'nullable',
             'notes' => 'nullable|string',
             'parent_task_id' => 'nullable|exists:tasks,id',
             'related_goal_id' => 'nullable|exists:goals,id',
             'is_recurring' => 'boolean',
             'recurring_frequency' => 'nullable|in:daily,weekly,monthly,yearly|required_if:is_recurring,true',
+            'media' => 'nullable|array',
+            'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,txt|max:10240', // 10MB max
         ]);
 
         $validated['user_id'] = Auth::id();
 
-        // Handle tags
+        // Handle tags - they might come as JSON string from FormData
         if (isset($validated['tags'])) {
-            $validated['tags'] = json_encode($validated['tags']);
+            if (is_string($validated['tags'])) {
+                try {
+                    // Try to decode JSON string
+                    $decodedTags = json_decode($validated['tags'], true);
+                    if (is_array($decodedTags)) {
+                        $validated['tags'] = json_encode($decodedTags);
+                    } else {
+                        // If not valid JSON, treat as comma-separated string
+                        $tagsArray = array_filter(array_map('trim', explode(',', $validated['tags'])));
+                        $validated['tags'] = json_encode($tagsArray);
+                    }
+                } catch (\Exception $e) {
+                    // If JSON decoding fails, treat as comma-separated string
+                    $tagsArray = array_filter(array_map('trim', explode(',', $validated['tags'])));
+                    $validated['tags'] = json_encode($tagsArray);
+                }
+            } elseif (is_array($validated['tags'])) {
+                $validated['tags'] = json_encode($validated['tags']);
+            }
         }
 
         $task = Task::create($validated);
+
+        // Handle file uploads if any
+        if ($request->hasFile('media')) {
+            $this->processMediaUploads($request, $task);
+        }
 
         return redirect()->route('tasks.index')->with('success', 'Task created successfully');
     }
@@ -185,7 +210,7 @@ class TaskController extends Controller
             ->get();
 
         return Inertia::render('Tasks/Edit', [
-            'task' => $task,
+            'task' => $task->load('media'),
             'users' => $users,
             'goals' => $goals,
         ]);
@@ -198,31 +223,71 @@ class TaskController extends Controller
     {
         Gate::authorize('update', $task);
 
+        // Debug: log incoming request data
+        \Log::debug('Task update request data:', $request->all());
+
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'sometimes|required|in:low,medium,high,urgent',
-            'status' => 'sometimes|required|in:pending,in_progress,completed,cancelled',
+            'status' => 'sometimes|required|in:pending,in_progress,completed,cancelled,not_started',
             'due_date' => 'sometimes|required|date',
             'assigned_to' => 'nullable|exists:users,id',
             'category' => 'nullable|string|max:100',
             'estimated_hours' => 'nullable|numeric|min:0',
             'actual_hours' => 'nullable|numeric|min:0',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:50',
+            'tags' => 'nullable',
             'notes' => 'nullable|string',
             'parent_task_id' => 'nullable|exists:tasks,id',
             'related_goal_id' => 'nullable|exists:goals,id',
             'is_recurring' => 'boolean',
             'recurring_frequency' => 'nullable|in:daily,weekly,monthly,yearly|required_if:is_recurring,true',
+            'media' => 'nullable|array',
+            'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,txt|max:10240', // 10MB max
         ]);
 
-        // Handle tags
+        \Log::debug('Validated data:', $validated);
+
+        // Handle tags - they might come as JSON string from FormData
         if (isset($validated['tags'])) {
-            $validated['tags'] = json_encode($validated['tags']);
+            if (is_string($validated['tags'])) {
+                try {
+                    // Try to decode JSON string
+                    $decodedTags = json_decode($validated['tags'], true);
+                    if (is_array($decodedTags)) {
+                        $validated['tags'] = json_encode($decodedTags);
+                    } else {
+                        // If not valid JSON, treat as comma-separated string
+                        $tagsArray = array_filter(array_map('trim', explode(',', $validated['tags'])));
+                        $validated['tags'] = json_encode($tagsArray);
+                    }
+                } catch (\Exception $e) {
+                    // If JSON decoding fails, treat as comma-separated string
+                    $tagsArray = array_filter(array_map('trim', explode(',', $validated['tags'])));
+                    $validated['tags'] = json_encode($tagsArray);
+                }
+            } elseif (is_array($validated['tags'])) {
+                $validated['tags'] = json_encode($validated['tags']);
+            }
         }
 
+        $oldStatus = $task->status;
         $task->update($validated);
+
+        // Handle file uploads if any
+        if ($request->hasFile('media')) {
+            $this->processMediaUploads($request, $task);
+        }
+
+        // Send notification if status changed to completed
+        if ($oldStatus !== 'completed' && $task->status === 'completed') {
+            \App\Services\NotificationService::sendTaskUpdate(
+                $task->assignedTo ?? $task->user,
+                $task->title,
+                'completed',
+                ['task_id' => $task->id]
+            );
+        }
 
         return redirect()->back()->with('success', 'Task updated successfully');
     }
@@ -247,12 +312,23 @@ class TaskController extends Controller
         Gate::authorize('update', $task);
 
         $validated = $request->validate([
-            'status' => 'required|in:pending,in_progress,completed,cancelled',
+            'status' => 'required|in:pending,in_progress,completed,cancelled,not_started',
             'actual_hours' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
+        $oldStatus = $task->status;
         $task->update($validated);
+
+        // Send notification if status changed to completed
+        if ($oldStatus !== 'completed' && $task->status === 'completed') {
+            \App\Services\NotificationService::sendTaskUpdate(
+                $task->assignedTo ?? $task->user,
+                $task->title,
+                'completed',
+                ['task_id' => $task->id]
+            );
+        }
 
         return redirect()->back()->with('success', 'Task status updated successfully');
     }
@@ -321,13 +397,61 @@ class TaskController extends Controller
             $query->where('priority', $request->get('priority'));
         }
 
-        $tasks = $query->orderBy('priority', 'desc')
-            ->orderBy('due_date', 'asc')
+        $tasks = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 15));
 
         return Inertia::render('Tasks/MyTasks', [
             'tasks' => $tasks,
             'filters' => $request->only(['status', 'priority'])
         ]);
+    }
+
+    /**
+     * Process media file uploads for a task
+     */
+    protected function processMediaUploads(Request $request, Task $task)
+    {
+        $uploadedFiles = $request->file('media');
+        $order = 0;
+
+        foreach ($uploadedFiles as $file) {
+            // Generate unique filename
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('task_media', $fileName, 'public');
+
+            // Create media record
+            TaskMedia::create([
+                'task_id' => $task->id,
+                'user_id' => Auth::id(),
+                'file_name' => $fileName,
+                'file_path' => $filePath,
+                'mime_type' => $file->getMimeType(),
+                'file_size' => $file->getSize(),
+                'original_name' => $file->getClientOriginalName(),
+                'order' => $order++,
+                'is_primary' => $order === 1, // First file is primary
+            ]);
+        }
+    }
+
+    /**
+     * Delete a media file from a task
+     */
+    public function destroyMedia(Task $task, TaskMedia $media)
+    {
+        Gate::authorize('update', $task);
+
+        // Verify that the media belongs to the task
+        if ($media->task_id !== $task->id) {
+            abort(403, 'This media does not belong to the specified task');
+        }
+
+        // Delete the file from storage
+        Storage::disk('public')->delete($media->file_path);
+
+        // Delete the media record
+        $media->delete();
+
+        return response()->json(['message' => 'Media file deleted successfully']);
     }
 }

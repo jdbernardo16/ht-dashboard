@@ -18,22 +18,14 @@
                                     class="block text-sm font-medium text-gray-700"
                                     >Client *</label
                                 >
-                                <select
+                                <Autocomplete
                                     id="client_id"
                                     v-model="form.client_id"
-                                    required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                >
-                                    <option value="">Select a client</option>
-                                    <option
-                                        v-for="client in clients"
-                                        :key="client.id"
-                                        :value="client.id"
-                                    >
-                                        {{ client.first_name }}
-                                        {{ client.last_name }}
-                                    </option>
-                                </select>
+                                    placeholder="Search for a client by name or email..."
+                                    class="mt-1"
+                                    @select="handleClientSelect"
+                                    @create="handleClientCreate"
+                                />
                                 <p
                                     v-if="errors.client_id"
                                     class="mt-1 text-sm text-red-600"
@@ -235,6 +227,7 @@
 import { ref } from "vue";
 import { router, useForm } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import Autocomplete from "@/Components/UI/Autocomplete.vue";
 
 const props = defineProps({
     clients: {
@@ -261,9 +254,9 @@ const submitForm = () => {
     loading.value = true;
     errors.value = {};
 
-    form.post(route("sales.store"), {
+    form.post(route("sales.web.store"), {
         onSuccess: () => {
-            router.visit(route("sales.index"));
+            router.visit(route("sales.web.index"));
         },
         onError: (error) => {
             errors.value = error;
@@ -274,7 +267,17 @@ const submitForm = () => {
     });
 };
 
+const handleClientSelect = (client) => {
+    console.log("Client selected:", client);
+    // The client_id is already set by v-model
+};
+
+const handleClientCreate = (client) => {
+    console.log("Client created:", client);
+    // The client_id is already set by v-model
+};
+
 const goBack = () => {
-    router.visit(route("sales.index"));
+    router.visit(route("sales.web.index"));
 };
 </script>

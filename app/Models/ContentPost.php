@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Services\ImageService;
+use Illuminate\Support\Facades\Log;
 
 class ContentPost extends Model
 {
@@ -18,6 +20,7 @@ class ContentPost extends Model
         'title',
         'description',
         'content_url',
+        'image',
         'post_count',
         'scheduled_date',
         'published_date',
@@ -35,12 +38,55 @@ class ContentPost extends Model
         'published_date' => 'date',
         'post_count' => 'integer',
         'engagement_metrics' => 'array',
+        'platform' => 'array',
         'tags' => 'array',
         'status' => 'string',
-        'platform' => 'string',
         'content_type' => 'string',
         'content_category' => 'string',
     ];
+
+    /**
+     * Boot the model
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Clean up images when content post is being deleted
+        static::deleting(function ($contentPost) {
+            try {
+                $imageService = app(ImageService::class);
+
+                // Delete main image
+                if ($contentPost->image) {
+                    $imageService->deleteImage($contentPost->image);
+                    Log::info('ContentPost main image cleaned up during model deletion', [
+                        'content_post_id' => $contentPost->id,
+                        'image_path' => $contentPost->image
+                    ]);
+                }
+
+                // Delete associated media files
+                $mediaFiles = $contentPost->media->pluck('file_path')->toArray();
+                if (!empty($mediaFiles)) {
+                    $deleteResults = $imageService->deleteImages($mediaFiles);
+                    Log::info('ContentPost media files cleaned up during model deletion', [
+                        'content_post_id' => $contentPost->id,
+                        'files' => $mediaFiles,
+                        'results' => $deleteResults
+                    ]);
+                }
+
+            } catch (\Exception $e) {
+                Log::error('Failed to clean up images during ContentPost deletion', [
+                    'content_post_id' => $contentPost->id,
+                    'error' => $e->getMessage()
+                ]);
+
+                // Don't prevent deletion, just log the error
+            }
+        });
+    }
 
     public function user()
     {
@@ -58,6 +104,22 @@ class ContentPost extends Model
     }
 
     /**
+     * Get all media files associated with this content post
+     */
+    public function media()
+    {
+        return $this->hasMany(ContentPostMedia::class);
+    }
+
+    /**
+     * Get the primary media file for this content post
+     */
+    public function primaryMedia()
+    {
+        return $this->hasOne(ContentPostMedia::class)->where('is_primary', true);
+    }
+
+    /**
      * Scope for filtering by status
      */
     public function scopeStatus($query, $status)
@@ -70,7 +132,7 @@ class ContentPost extends Model
      */
     public function scopePlatform($query, $platform)
     {
-        return $query->where('platform', $platform);
+        return $query->whereJsonContains('platform', $platform);
     }
 
     /**

@@ -31,8 +31,8 @@ return new class extends Migration
             $table->boolean('is_recurring')->default(false)->after('related_goal_id');
             $table->enum('recurring_frequency', ['daily', 'weekly', 'monthly', 'yearly'])->nullable()->after('is_recurring');
 
-            // Update status enum to include 'cancelled'
-            $table->enum('status', ['pending', 'in_progress', 'completed', 'cancelled'])->default('pending')->change();
+            // Update status enum to include 'cancelled' and 'not_started'
+            $table->enum('status', ['pending', 'in_progress', 'completed', 'cancelled', 'not_started'])->default('pending')->change();
         });
     }
 
@@ -47,7 +47,7 @@ return new class extends Migration
             $table->dropForeign(['assigned_to']);
             $table->foreignId('assigned_to')->constrained('users')->onDelete('cascade')->change();
             $table->dropColumn(['category', 'estimated_hours', 'actual_hours', 'tags', 'notes', 'parent_task_id', 'related_goal_id', 'is_recurring', 'recurring_frequency']);
-            $table->enum('status', ['pending', 'in_progress', 'completed'])->default('pending')->change();
+            $table->enum('status', ['pending', 'in_progress', 'completed', 'cancelled'])->default('pending')->change();
         });
     }
 };

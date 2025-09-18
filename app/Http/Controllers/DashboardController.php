@@ -10,6 +10,7 @@ use App\Models\ContentPost;
 use App\Models\Goal;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,25 +20,71 @@ class DashboardController extends Controller
     /**
      * Display the dashboard with all module data
      *
+     * @param Request $request
      * @return Response
      */
-    public function dashboard(): Response
+    public function dashboard(Request $request): Response
     {
+        $period = $request->input('period', 'daily');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
         return Inertia::render('Dashboard', [
             'dashboardData' => [
-                'dailySummary' => $this->gatherDailySummary(),
-                'activityDistribution' => $this->gatherActivityDistribution(),
-                'salesMetrics' => $this->gatherSalesMetrics(),
-                'expenses' => $this->gatherExpenses(),
-                'contentStats' => $this->gatherContentStats(),
+                'dailySummary' => $this->gatherSummaryData($period, $startDate, $endDate),
+                'activityDistribution' => $this->gatherActivityDistributionData($period, $startDate, $endDate),
+                'salesMetrics' => $this->gatherSalesMetricsData($period, $startDate, $endDate),
+                'expenses' => $this->gatherExpensesData($period, $startDate, $endDate),
+                'contentStats' => $this->gatherContentStatsData($period, $startDate, $endDate),
                 'quarterlyGoals' => $this->gatherQuarterlyGoals(),
             ],
             'lastUpdated' => now()->toIso8601String(),
+            'currentPeriod' => $period,
+            'currentStartDate' => $startDate,
+            'currentEndDate' => $endDate,
         ]);
     }
 
     /**
-     * Get daily summary data for dashboard
+     * Get dashboard data for specific time period
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getDashboardData(Request $request): JsonResponse
+    {
+        $period = $request->input('period', 'daily');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        return response()->json([
+            'dailySummary' => $this->gatherSummaryData($period, $startDate, $endDate),
+            'activityDistribution' => $this->gatherActivityDistributionData($period, $startDate, $endDate),
+            'salesMetrics' => $this->gatherSalesMetricsData($period, $startDate, $endDate),
+            'expenses' => $this->gatherExpensesData($period, $startDate, $endDate),
+            'contentStats' => $this->gatherContentStatsData($period, $startDate, $endDate),
+            'quarterlyGoals' => $this->gatherQuarterlyGoals(),
+            'last_updated' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Get summary data for dashboard with time period filtering
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getSummary(Request $request): JsonResponse
+    {
+        $period = $request->input('period', 'daily');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        return response()->json($this->gatherSummaryData($period, $startDate, $endDate));
+    }
+
+    /**
+     * Get daily summary data for dashboard (legacy)
      *
      * @return JsonResponse
      */
@@ -103,6 +150,64 @@ class DashboardController extends Controller
     }
 
     /**
+     * Gather summary data based on time period
+     *
+     * @param string $period
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @return array
+     */
+    private function gatherSummaryData(string $period, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $dateRange = $this->getDateRange($period, $startDate, $endDate);
+        $start = $dateRange['start'];
+        $end = $dateRange['end'];
+
+        // Get tasks for the period
+        $tasks = Task::whereBetween('created_at', [$start, $end])
+            ->selectRaw("
+                COUNT(*) as total_tasks,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_tasks,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_tasks,
+                SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tasks
+            ")
+            ->first();
+
+        // Get revenue for the period
+        $revenue = (float) Sale::whereBetween('created_at', [$start, $end])->sum('amount');
+
+        // Calculate target based on period
+        $target = $this->calculateTarget($period, $revenue);
+
+        return [
+            'tasks' => [
+                'total' => (int) (optional($tasks)->total_tasks ?? 0),
+                'completed' => (int) (optional($tasks)->completed_tasks ?? 0),
+                'pending' => (int) (optional($tasks)->pending_tasks ?? 0),
+                'in_progress' => (int) (optional($tasks)->in_progress_tasks ?? 0),
+            ],
+            'revenue' => [
+                'today' => $revenue,
+                'target' => (float) $target,
+                'percentage' => $target > 0 ? round(($revenue / $target) * 100, 1) : 0,
+                'change' => 0, // TODO: Implement change calculation based on previous period
+            ],
+            'projects' => [
+                'active' => 0,
+                'completed' => 0,
+            ],
+            'hoursWorked' => 0,
+            'meetings' => 0,
+            'emails' => 0,
+            'deadlines' => 0,
+            'period' => $period,
+            'start_date' => $start->toDateString(),
+            'end_date' => $end->toDateString(),
+            'last_updated' => now()->toIso8601String(),
+        ];
+    }
+
+    /**
      * Get activity distribution data
      *
      * @return JsonResponse
@@ -110,6 +215,21 @@ class DashboardController extends Controller
     public function getActivityDistribution(): JsonResponse
     {
         return response()->json($this->gatherActivityDistribution());
+    }
+
+    /**
+     * Get activity distribution data with time period filtering
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getActivityDistributionData(Request $request): JsonResponse
+    {
+        $period = $request->input('period', 'daily');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        return response()->json($this->gatherActivityDistributionData($period, $startDate, $endDate));
     }
 
     private function gatherActivityDistribution(): array
@@ -154,6 +274,55 @@ class DashboardController extends Controller
     }
 
     /**
+     * Gather activity distribution data based on time period
+     *
+     * @param string $period
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @return array
+     */
+    private function gatherActivityDistributionData(string $period, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $dateRange = $this->getDateRange($period, $startDate, $endDate);
+        $start = $dateRange['start'];
+        $end = $dateRange['end'];
+
+        // Get activity breakdown by status
+        $activities = Task::whereBetween('created_at', [$start, $end])
+            ->select('status', DB::raw('COUNT(*) as count'))
+            ->groupBy('status')
+            ->get()
+            ->map(function ($activity) {
+                $status = $activity->status ?? 'other';
+                return [
+                    'name' => ucfirst(str_replace('_', ' ', $status)),
+                    'value' => (int) $activity->count,
+                    'color' => $this->getActivityColor($status),
+                ];
+            });
+
+        // Get daily activity trend
+        $dailyTrend = Task::whereBetween('created_at', [$start, $end])
+            ->select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as count'))
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'date' => $item->date,
+                    'count' => (int) $item->count,
+                ];
+            });
+
+        return [
+            'distribution' => $activities,
+            'daily_trend' => $dailyTrend,
+            'total_activities' => $activities->sum('value'),
+            'period' => $this->getPeriodLabel($period, $start, $end),
+        ];
+    }
+
+    /**
      * Get sales metrics data
      *
      * @return JsonResponse
@@ -161,6 +330,21 @@ class DashboardController extends Controller
     public function getSalesMetrics(): JsonResponse
     {
         return response()->json($this->gatherSalesMetrics());
+    }
+
+    /**
+     * Get sales metrics data with time period filtering
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getSalesMetricsData(Request $request): JsonResponse
+    {
+        $period = $request->input('period', 'daily');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        return response()->json($this->gatherSalesMetricsData($period, $startDate, $endDate));
     }
 
     private function gatherSalesMetrics(): array
@@ -214,6 +398,65 @@ class DashboardController extends Controller
     }
 
     /**
+     * Gather sales metrics data based on time period
+     *
+     * @param string $period
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @return array
+     */
+    private function gatherSalesMetricsData(string $period, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $dateRange = $this->getDateRange($period, $startDate, $endDate);
+        $start = $dateRange['start'];
+        $end = $dateRange['end'];
+
+        // Sales data for the period
+        $salesData = Sale::whereBetween('created_at', [$start, $end])
+            ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(amount) as daily_sales'))
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'date' => $item->date,
+                    'sales' => (float) $item->daily_sales,
+                ];
+            });
+
+        // Sales summary
+        $salesSummary = Sale::whereBetween('created_at', [$start, $end])
+            ->selectRaw('COUNT(*) as total_sales, SUM(amount) as total_revenue, AVG(amount) as average_sale, MAX(amount) as highest_sale')
+            ->first();
+
+        // Top products/services
+        $topProducts = Sale::whereBetween('created_at', [$start, $end])
+            ->select('product_name', DB::raw('SUM(amount) as total_sales'))
+            ->groupBy('product_name')
+            ->orderByDesc('total_sales')
+            ->limit(5)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'name' => $item->product_name,
+                    'sales' => (float) $item->total_sales,
+                ];
+            });
+
+        return [
+            'monthly_sales' => $salesData,
+            'summary' => [
+                'total_sales' => (int) optional($salesSummary)->total_sales ?? 0,
+                'total_revenue' => (float) optional($salesSummary)->total_revenue ?? 0,
+                'average_sale' => (float) optional($salesSummary)->average_sale ?? 0,
+                'highest_sale' => (float) optional($salesSummary)->highest_sale ?? 0,
+            ],
+            'top_products' => $topProducts,
+            'period' => $this->getPeriodLabel($period, $start, $end),
+        ];
+    }
+
+    /**
      * Get expenses data
      *
      * @return JsonResponse
@@ -221,6 +464,21 @@ class DashboardController extends Controller
     public function getExpenses(): JsonResponse
     {
         return response()->json($this->gatherExpenses());
+    }
+
+    /**
+     * Get expenses data with time period filtering
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getExpensesData(Request $request): JsonResponse
+    {
+        $period = $request->input('period', 'daily');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        return response()->json($this->gatherExpensesData($period, $startDate, $endDate));
     }
 
     private function gatherExpenses(): array
@@ -276,6 +534,68 @@ class DashboardController extends Controller
     }
 
     /**
+     * Gather expenses data based on time period
+     *
+     * @param string $period
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @return array
+     */
+    private function gatherExpensesData(string $period, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $dateRange = $this->getDateRange($period, $startDate, $endDate);
+        $start = $dateRange['start'];
+        $end = $dateRange['end'];
+
+        // Expenses by category
+        $expensesByCategory = Expense::whereBetween('created_at', [$start, $end])
+            ->select('category', DB::raw('SUM(amount) as total_amount'))
+            ->groupBy('category')
+            ->get()
+            ->map(function ($expense) {
+                $cat = $expense->category ?? 'other';
+                return [
+                    'category' => ucfirst($cat),
+                    'amount' => (float) $expense->total_amount,
+                    'color' => $this->getExpenseColor($cat),
+                ];
+            });
+
+        // Daily expenses trend
+        $dailyExpenses = Expense::whereBetween('created_at', [$start, $end])
+            ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(amount) as daily_expense'))
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'date' => $item->date,
+                    'expense' => (float) $item->daily_expense,
+                ];
+            });
+
+        // Expense summary
+        $totalExpenses = (float) Expense::whereBetween('created_at', [$start, $end])->sum('amount');
+
+        // Calculate budget based on period
+        $budget = $this->calculateBudget($period, $totalExpenses);
+        $budgetRemaining = max(0, $budget - $totalExpenses);
+        $budgetUsedPercentage = $budget > 0 ? round(($totalExpenses / $budget) * 100, 1) : 0;
+
+        return [
+            'expenses_by_category' => $expensesByCategory,
+            'daily_expenses' => $dailyExpenses,
+            'summary' => [
+                'total_expenses' => $totalExpenses,
+                'budget' => $budget,
+                'remaining' => $budgetRemaining,
+                'percentage_used' => $budgetUsedPercentage,
+            ],
+            'period' => $this->getPeriodLabel($period, $start, $end),
+        ];
+    }
+
+    /**
      * Get content statistics
      *
      * @return JsonResponse
@@ -283,6 +603,21 @@ class DashboardController extends Controller
     public function getContentStats(): JsonResponse
     {
         return response()->json($this->gatherContentStats());
+    }
+
+    /**
+     * Get content statistics with time period filtering
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getContentStatsData(Request $request): JsonResponse
+    {
+        $period = $request->input('period', 'daily');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        return response()->json($this->gatherContentStatsData($period, $startDate, $endDate));
     }
 
     private function gatherContentStats(): array
@@ -347,6 +682,80 @@ class DashboardController extends Controller
                 'average_views' => $totalContent > 0 ? round($totalViews / $totalContent) : 0,
             ],
             'month' => Carbon::now()->format('F Y'),
+        ];
+    }
+
+    /**
+     * Gather content statistics data based on time period
+     *
+     * @param string $period
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @return array
+     */
+    private function gatherContentStatsData(string $period, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $dateRange = $this->getDateRange($period, $startDate, $endDate);
+        $start = $dateRange['start'];
+        $end = $dateRange['end'];
+
+        // Content performance by type
+        $contentByType = ContentPost::whereBetween('created_at', [$start, $end])
+            ->select('content_type', DB::raw('COUNT(*) as count'))
+            ->groupBy('content_type')
+            ->get()
+            ->map(function ($content) {
+                return [
+                    'type' => ucfirst($content->content_type ?? 'Other'),
+                    'count' => (int) $content->count,
+                ];
+            });
+
+        // Recent content with engagement
+        $recentContent = ContentPost::whereBetween('created_at', [$start, $end])
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get()
+            ->map(function ($content) {
+                // engagement_metrics is cast to array on the model. Ensure we handle both string (raw JSON) and array.
+                $engagement = is_string($content->engagement_metrics)
+                    ? json_decode($content->engagement_metrics, true) ?? []
+                    : ($content->engagement_metrics ?? []);
+
+                return [
+                    'title' => $content->title ?? 'Untitled',
+                    'type' => $content->content_type ?? 'Other',
+                    'views' => (int) ($engagement['views'] ?? 0),
+                    'likes' => (int) ($engagement['likes'] ?? 0),
+                    'shares' => (int) ($engagement['shares'] ?? 0),
+                    'created_at' => optional($content->created_at)->toDateString(),
+                ];
+            });
+
+        // Content performance summary
+        $totalContent = (int) ContentPost::whereBetween('created_at', [$start, $end])->count();
+
+        // Calculate total views from engagement_metrics JSON field
+        $totalViews = ContentPost::whereBetween('created_at', [$start, $end])
+            ->get()
+            ->sum(function ($content) {
+                // engagement_metrics may already be cast to array by the model; handle both string and array safely
+                $engagement = is_string($content->engagement_metrics)
+                    ? json_decode($content->engagement_metrics, true) ?? []
+                    : ($content->engagement_metrics ?? []);
+
+                return (int) ($engagement['views'] ?? 0);
+            });
+
+        return [
+            'content_by_type' => $contentByType,
+            'recent_content' => $recentContent,
+            'summary' => [
+                'total_content' => $totalContent,
+                'total_views' => $totalViews,
+                'average_views' => $totalContent > 0 ? round($totalViews / $totalContent) : 0,
+            ],
+            'period' => $this->getPeriodLabel($period, $start, $end),
         ];
     }
 
@@ -467,6 +876,121 @@ class DashboardController extends Controller
             return 'in_progress';
         } else {
             return 'not_started';
+        }
+    }
+
+    /**
+     * Get date range based on period
+     */
+    private function getDateRange(string $period, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $now = Carbon::now();
+
+        switch ($period) {
+            case 'daily':
+                $start = $now->copy()->startOfDay();
+                $end = $now->copy()->endOfDay();
+                break;
+            case 'weekly':
+                $start = $now->copy()->startOfWeek();
+                $end = $now->copy()->endOfWeek();
+                break;
+            case 'monthly':
+                $start = $now->copy()->startOfMonth();
+                $end = $now->copy()->endOfMonth();
+                break;
+            case 'quarterly':
+                $start = $now->copy()->startOfQuarter();
+                $end = $now->copy()->endOfQuarter();
+                break;
+            case 'yearly':
+                $start = $now->copy()->startOfYear();
+                $end = $now->copy()->endOfYear();
+                break;
+            case 'custom':
+                $start = $startDate ? Carbon::parse($startDate)->startOfDay() : $now->copy()->startOfMonth();
+                $end = $endDate ? Carbon::parse($endDate)->endOfDay() : $now->copy()->endOfMonth();
+                break;
+            default:
+                $start = $now->copy()->startOfDay();
+                $end = $now->copy()->endOfDay();
+        }
+
+        return ['start' => $start, 'end' => $end];
+    }
+
+    /**
+     * Calculate target based on period
+     */
+    private function calculateTarget(string $period, float $currentRevenue): float
+    {
+        $baseDailyTarget = 5000;
+
+        switch ($period) {
+            case 'daily':
+                return $baseDailyTarget;
+            case 'weekly':
+                return $baseDailyTarget * 7;
+            case 'monthly':
+                return $baseDailyTarget * 30;
+            case 'quarterly':
+                return $baseDailyTarget * 90;
+            case 'yearly':
+                return $baseDailyTarget * 365;
+            case 'custom':
+                // For custom periods, use current revenue as target if it's higher, otherwise use base
+                return max($currentRevenue, $baseDailyTarget);
+            default:
+                return $baseDailyTarget;
+        }
+    }
+
+    /**
+     * Calculate budget based on period
+     */
+    private function calculateBudget(string $period, float $currentExpenses): float
+    {
+        $baseDailyBudget = 5000;
+
+        switch ($period) {
+            case 'daily':
+                return $baseDailyBudget;
+            case 'weekly':
+                return $baseDailyBudget * 7;
+            case 'monthly':
+                return $baseDailyBudget * 30;
+            case 'quarterly':
+                return $baseDailyBudget * 90;
+            case 'yearly':
+                return $baseDailyBudget * 365;
+            case 'custom':
+                // For custom periods, use current expenses as budget if it's higher, otherwise use base
+                return max($currentExpenses, $baseDailyBudget);
+            default:
+                return $baseDailyBudget;
+        }
+    }
+
+    /**
+     * Get period label for display
+     */
+    private function getPeriodLabel(string $period, Carbon $start, Carbon $end): string
+    {
+        switch ($period) {
+            case 'daily':
+                return 'Today';
+            case 'weekly':
+                return 'This Week';
+            case 'monthly':
+                return 'This Month';
+            case 'quarterly':
+                return 'This Quarter';
+            case 'yearly':
+                return 'This Year';
+            case 'custom':
+                return $start->format('M j, Y') . ' - ' . $end->format('M j, Y');
+            default:
+                return 'Today';
         }
     }
 }

@@ -68,27 +68,33 @@
                             <!-- Platform -->
                             <div>
                                 <label
-                                    for="platform"
-                                    class="block text-sm font-medium text-gray-700"
+                                    class="block text-sm font-medium text-gray-700 mb-2"
                                 >
-                                    Platform *
+                                    Platforms *
                                 </label>
-                                <select
-                                    id="platform"
-                                    v-model="form.platform"
-                                    required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                <div
+                                    class="grid grid-cols-2 md:grid-cols-3 gap-3"
                                 >
-                                    <option value="">Select a platform</option>
-                                    <option value="facebook">Facebook</option>
-                                    <option value="instagram">Instagram</option>
-                                    <option value="twitter">Twitter</option>
-                                    <option value="linkedin">LinkedIn</option>
-                                    <option value="tiktok">TikTok</option>
-                                    <option value="youtube">YouTube</option>
-                                    <option value="pinterest">Pinterest</option>
-                                    <option value="other">Other</option>
-                                </select>
+                                    <div
+                                        v-for="platformOption in platformOptions"
+                                        :key="platformOption.value"
+                                        class="flex items-center"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            :id="`platform-${platformOption.value}`"
+                                            :value="platformOption.value"
+                                            v-model="form.platform"
+                                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                        />
+                                        <label
+                                            :for="`platform-${platformOption.value}`"
+                                            class="ml-2 text-sm text-gray-700"
+                                        >
+                                            {{ platformOption.label }}
+                                        </label>
+                                    </div>
+                                </div>
                                 <p
                                     v-if="errors.platform"
                                     class="mt-1 text-sm text-red-600"
@@ -336,6 +342,55 @@
                                 </p>
                             </div>
 
+                            <!-- Image Upload -->
+                            <div>
+                                <InputLabel value="Upload Image" class="mb-2" />
+                                <BaseFileUploader
+                                    v-model="form.image"
+                                    label="Main Image"
+                                    :acceptTypes="['image']"
+                                    :multiple="false"
+                                    :maxSize="10"
+                                    description="Drag & drop image here or click to browse"
+                                    :withPreview="true"
+                                    :required="false"
+                                    :error="errors.image"
+                                />
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Upload a single image file. Supported
+                                    formats: JPG, PNG, GIF, WebP (max 10MB)
+                                </p>
+                            </div>
+
+                            <!-- Media Upload -->
+                            <div>
+                                <InputLabel
+                                    value="Upload Additional Files"
+                                    class="mb-2"
+                                />
+                                <BaseFileUploader
+                                    v-model="form.media"
+                                    label="Additional Files"
+                                    :acceptTypes="[
+                                        'image',
+                                        'pdf',
+                                        'xlsx',
+                                        'csv',
+                                    ]"
+                                    :multiple="true"
+                                    :maxSize="10"
+                                    description="Drag & drop files here or click to browse"
+                                    :withPreview="false"
+                                    :required="false"
+                                    :error="errors.media"
+                                />
+                                <p class="text-xs text-gray-500 mt-2">
+                                    You can upload up to 10 files. Supported
+                                    formats: JPG, PNG, GIF, PDF, Excel, CSV (max
+                                    10MB each)
+                                </p>
+                            </div>
+
                             <!-- Submit Buttons -->
                             <div
                                 class="flex items-center justify-end space-x-3"
@@ -368,11 +423,12 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { router, useForm } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
+import BaseFileUploader from "@/Components/Shared/Fields/BaseFileUploader.vue";
 
 const props = defineProps({
     clients: {
@@ -384,13 +440,27 @@ const props = defineProps({
 const loading = ref(false);
 const errors = ref({});
 
+const platformOptions = [
+    { value: "website", label: "Website" },
+    { value: "facebook", label: "Facebook" },
+    { value: "instagram", label: "Instagram" },
+    { value: "twitter", label: "Twitter" },
+    { value: "linkedin", label: "LinkedIn" },
+    { value: "tiktok", label: "TikTok" },
+    { value: "youtube", label: "YouTube" },
+    { value: "pinterest", label: "Pinterest" },
+    { value: "email", label: "Email" },
+    { value: "other", label: "Other" },
+];
+
 const form = useForm({
     client_id: "",
     title: "",
-    platform: "",
+    platform: [],
     content_type: "",
     description: "",
     content_url: "",
+    image: null, // This will store either File object or FileData object
     post_count: 1,
     scheduled_date: "",
     published_date: "",
@@ -398,7 +468,32 @@ const form = useForm({
     content_category: "",
     tags: "",
     notes: "",
+    media: [],
 });
+
+// Watch for changes to the image field and extract File object if it's a FileData object
+watch(
+    () => form.image,
+    (newImage) => {
+        if (
+            newImage &&
+            typeof newImage === "object" &&
+            newImage.file instanceof File
+        ) {
+            // If it's a FileData object with a file property, extract the File object
+            form.image = newImage.file;
+            console.log(
+                "Extracted File object from FileData:",
+                newImage.file.name
+            );
+        }
+    },
+    { deep: true }
+);
+
+const handleFileError = (error) => {
+    errors.value.media = error;
+};
 
 const submitForm = () => {
     loading.value = true;
@@ -412,15 +507,61 @@ const submitForm = () => {
               .filter((tag) => tag)
         : [];
 
-    // Transform the form data
-    form.transform((data) => ({
-        ...data,
-        tags: tagsArray,
-    })).post(route("content.store"), {
+    // Convert File objects to FormData for proper file upload
+    const formData = new FormData();
+
+    // Add all form fields
+    Object.keys(form.data()).forEach((key) => {
+        if (key === "media") {
+            // Handle media file uploads (multiple files)
+            if (Array.isArray(form.media)) {
+                form.media.forEach((fileData, index) => {
+                    if (fileData?.file instanceof File) {
+                        formData.append(`media[${index}]`, fileData.file);
+                    }
+                });
+            }
+        } else if (key === "image") {
+            console.log("Processing image field:", form.image);
+            // Handle single image file upload - should now be a direct File object
+            if (form.image && form.image instanceof File) {
+                formData.append(key, form.image);
+                console.log("Appended image file:", form.image.name);
+            } else {
+                console.log(
+                    "Image field is not a valid File object:",
+                    form.image
+                );
+            }
+        } else if (Array.isArray(form[key])) {
+            // Handle arrays (like platform)
+            form[key].forEach((item, index) => {
+                formData.append(`${key}[${index}]`, item);
+            });
+        } else {
+            formData.append(key, form[key]);
+        }
+    });
+
+    // Add tags array
+    tagsArray.forEach((tag, index) => {
+        formData.append(`tags[${index}]`, tag);
+    });
+
+    // Debug: Log what's in the formData for image field
+    console.log("FormData image field:", formData.get("image"));
+    console.log("Form image field value:", form.image);
+    console.log("Form image field type:", typeof form.image);
+
+    // Use FormData for the post request - let browser set Content-Type automatically
+    form.post(route("content.web.store"), {
+        data: formData,
+        // Remove manual Content-Type header - browser sets it automatically with boundary
         onSuccess: () => {
-            router.visit(route("content.index"));
+            router.visit(route("content.web.index"));
         },
         onError: (error) => {
+            console.error("Form submission error:", error);
             errors.value = error;
         },
         onFinish: () => {
@@ -430,6 +571,6 @@ const submitForm = () => {
 };
 
 const goBack = () => {
-    router.visit(route("content.index"));
+    router.visit(route("content.web.index"));
 };
 </script>

@@ -1,5 +1,14 @@
 <template>
-    <DashboardModule title="Expense Tracking" :loading="loading" :error="error">
+    <DashboardModule
+        title="Expense Tracking"
+        :loading="loading"
+        :error="error"
+        :show-time-period="true"
+        :current-period="currentPeriod"
+        :current-start-date="currentStartDate"
+        :current-end-date="currentEndDate"
+        @period-change="$emit('period-change', $event)"
+    >
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Total Expenses -->
             <div class="lg:col-span-1">
@@ -12,15 +21,10 @@
                     </div>
                     <div class="flex items-center">
                         <span
-                            :class="
-                                expenses.change >= 0
-                                    ? 'text-red-600'
-                                    : 'text-green-600'
-                            "
+                            :class="expenseChange.colorClass"
                             class="text-sm font-medium"
                         >
-                            {{ expenses.change >= 0 ? "+" : ""
-                            }}{{ expenses.change }}%
+                            {{ expenseChange.formatted }}
                         </span>
                         <span class="text-sm text-gray-500 ml-1"
                             >vs last month</span
@@ -73,8 +77,11 @@
                                     class="h-2 rounded-full"
                                     :style="{
                                         width: `${
-                                            (category.amount / expenses.total) *
-                                            100
+                                            expenses.total > 0
+                                                ? (category.amount /
+                                                      expenses.total) *
+                                                  100
+                                                : 0
                                         }%`,
                                         backgroundColor: category.color,
                                     }"
@@ -105,8 +112,11 @@
             </div>
         </div>
 
-        <!-- Recent Expenses -->
-        <div class="mt-6 bg-white rounded-lg border">
+        <!-- Recent Expenses - Only show if we have recent expenses data -->
+        <div
+            v-if="expenses.recent && expenses.recent.length > 0"
+            class="mt-6 bg-white rounded-lg border"
+        >
             <div class="px-6 py-4 border-b">
                 <h3 class="text-lg font-semibold text-gray-900">
                     Recent Expenses
@@ -182,6 +192,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { Chart, registerables } from "chart.js";
 import DashboardModule from "./DashboardModule.vue";
+import { formatPercentageWithColor } from "../../Utils/utils.js";
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -209,13 +220,28 @@ const props = defineProps({
         type: String,
         default: null,
     },
+    currentPeriod: {
+        type: String,
+        default: "daily",
+    },
+    currentStartDate: {
+        type: String,
+        default: "",
+    },
+    currentEndDate: {
+        type: String,
+        default: "",
+    },
 });
+
+defineEmits(["period-change"]);
 
 const expenseChartRef = ref(null);
 let chartInstance = null;
 
 const expenses = computed(() => {
-    if (!props.data.summary) {
+    // If no data from backend, return fallback data
+    if (!props.data || !props.data.summary) {
         return {
             total: 28450,
             change: 5.2,
@@ -269,7 +295,7 @@ const expenses = computed(() => {
         change: Math.round(change * 10) / 10,
         monthly: props.data.summary.total_expenses,
         dailyAverage: Math.round(dailyAverage),
-        categories: props.data.expenses_by_category.map((expense) => ({
+        categories: (props.data.expenses_by_category || []).map((expense) => ({
             name: expense.category,
             amount: expense.amount,
             color: expense.color,
@@ -278,7 +304,18 @@ const expenses = computed(() => {
     };
 });
 
+// Computed properties for percentage formatting
+const expenseChange = computed(() => {
+    if (!expenses.value || expenses.value.change === undefined) {
+        return { formatted: "0%", colorClass: "text-gray-600" };
+    }
+    return formatPercentageWithColor(expenses.value.change);
+});
+
 const formatCurrency = (value) => {
+    if (value === undefined || value === null || isNaN(value)) {
+        return "0";
+    }
     return new Intl.NumberFormat("en-US", {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
@@ -286,10 +323,15 @@ const formatCurrency = (value) => {
 };
 
 const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-    });
+    if (!dateString) return "N/A";
+    try {
+        return new Date(dateString).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+        });
+    } catch (error) {
+        return "Invalid date";
+    }
 };
 
 const createChart = () => {

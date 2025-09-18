@@ -4,11 +4,23 @@
             cn('hover:shadow-lg transition-shadow duration-200', $attrs.class)
         "
     >
-        <CardHeader v-if="$slots.header || title">
-            <CardTitle v-if="title">{{ title }}</CardTitle>
-            <CardDescription v-if="description">{{
-                description
-            }}</CardDescription>
+        <CardHeader v-if="$slots.header || title || showTimePeriod">
+            <div class="flex items-center justify-between">
+                <div>
+                    <CardTitle v-if="title">{{ title }}</CardTitle>
+                    <CardDescription v-if="description">{{
+                        description
+                    }}</CardDescription>
+                </div>
+                <div v-if="showTimePeriod" class="time-period-container">
+                    <TimePeriodDropdown
+                        :current-period="currentPeriod"
+                        :current-start-date="currentStartDate"
+                        :current-end-date="currentEndDate"
+                        @period-change="$emit('period-change', $event)"
+                    />
+                </div>
+            </div>
             <slot name="header" />
         </CardHeader>
 
@@ -30,14 +42,31 @@ import CardTitle from "@/Components/UI/CardTitle.vue";
 import CardDescription from "@/Components/UI/CardDescription.vue";
 import CardContent from "@/Components/UI/CardContent.vue";
 import CardFooter from "@/Components/UI/CardFooter.vue";
+import TimePeriodDropdown from "./TimePeriodDropdown.vue";
 
 interface Props {
     title?: string;
     description?: string;
     contentClass?: string;
+    showTimePeriod?: boolean;
+    currentPeriod?: string;
+    currentStartDate?: string;
+    currentEndDate?: string;
 }
 
 withDefaults(defineProps<Props>(), {
     contentClass: "",
+    showTimePeriod: false,
+    currentPeriod: "daily",
+    currentStartDate: "",
+    currentEndDate: "",
 });
+
+defineEmits(["period-change"]);
 </script>
+
+<style scoped>
+.time-period-container {
+    @apply ml-4;
+}
+</style>

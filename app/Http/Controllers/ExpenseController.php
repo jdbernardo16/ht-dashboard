@@ -24,12 +24,17 @@ class ExpenseController extends Controller
             $search = $request->get('search');
             $query->where(function ($q) use ($search) {
                 $q->where('description', 'like', "%{$search}%")
-                    ->orWhere('category', 'like', "%{$search}%");
+                    ->orWhere('category', 'like', "%{$search}%")
+                    ->orWhere('merchant', 'like', "%{$search}%");
             });
         }
 
         if ($request->has('status')) {
             $query->where('status', $request->get('status'));
+        }
+
+        if ($request->has('category')) {
+            $query->where('category', $request->get('category'));
         }
 
         if ($request->has('date_from')) {
@@ -38,6 +43,14 @@ class ExpenseController extends Controller
 
         if ($request->has('date_to')) {
             $query->whereDate('expense_date', '<=', $request->get('date_to'));
+        }
+
+        if ($request->has('min_amount')) {
+            $query->where('amount', '>=', $request->get('min_amount'));
+        }
+
+        if ($request->has('max_amount')) {
+            $query->where('amount', '<=', $request->get('max_amount'));
         }
 
         // Role-based filtering
@@ -74,7 +87,7 @@ class ExpenseController extends Controller
 
         return Inertia::render('Expenses/Index', [
             'expenses' => $expenses,
-            'filters' => $request->only(['search', 'status', 'date_from', 'date_to', 'min_amount', 'max_amount'])
+            'filters' => $request->only(['search', 'status', 'category', 'date_from', 'date_to', 'min_amount', 'max_amount'])
         ]);
     }
 
@@ -160,7 +173,18 @@ class ExpenseController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        $oldStatus = $expense->status;
         $expense->update($validated);
+
+        // Send notification if status changed to paid (approved)
+        if ($oldStatus !== 'paid' && $expense->status === 'paid') {
+            \App\Services\NotificationService::sendExpenseApproval(
+                $expense->user,
+                $expense->amount,
+                $expense->category,
+                ['expense_id' => $expense->id]
+            );
+        }
 
         return redirect()->route('expenses.index')
             ->with('success', 'Expense updated successfully');

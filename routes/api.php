@@ -40,4 +40,30 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Categories API routes
     Route::apiResource('categories', \App\Http\Controllers\CategoryController::class);
+
+    // Client search and creation API routes
+    Route::get('/clients/search', [\App\Http\Controllers\SalesController::class, 'searchClients'])->name('clients.search');
+    Route::post('/clients', [\App\Http\Controllers\SalesController::class, 'createClient'])->name('clients.create');
+
+    // Dashboard API routes
+    Route::get('/dashboard/data', [\App\Http\Controllers\DashboardController::class, 'getDashboardData'])->name('dashboard.data');
+    Route::get('/dashboard/summary', [\App\Http\Controllers\DashboardController::class, 'getSummary'])->name('dashboard.summary');
+    Route::get('/dashboard/sales', [\App\Http\Controllers\DashboardController::class, 'getSalesMetricsData'])->name('dashboard.sales');
+    Route::get('/dashboard/expenses', [\App\Http\Controllers\DashboardController::class, 'getExpensesData'])->name('dashboard.expenses');
+    Route::get('/dashboard/content', [\App\Http\Controllers\DashboardController::class, 'getContentStatsData'])->name('dashboard.content');
+});
+
+// File upload API routes
+Route::prefix('upload')->name('upload.')->group(function () {
+    Route::get('/config', [\App\Http\Controllers\FileUploadController::class, 'config'])->name('config');
+    Route::post('/', [\App\Http\Controllers\FileUploadController::class, 'upload'])->name('single');
+    Route::post('/multiple', [\App\Http\Controllers\FileUploadController::class, 'uploadMultiple'])->name('multiple');
+    Route::delete('/{file}', [\App\Http\Controllers\FileUploadController::class, 'destroy'])->name('destroy');
+});
+
+// Optional: Admin routes with authentication
+Route::middleware(['auth:sanctum'])->prefix('admin/upload')->name('admin.upload.')->group(function () {
+    Route::post('/', [\App\Http\Controllers\FileUploadController::class, 'upload'])->name('single');
+    Route::post('/multiple', [\App\Http\Controllers\FileUploadController::class, 'uploadMultiple'])->name('multiple');
+    Route::delete('/{file}', [\App\Http\Controllers\FileUploadController::class, 'destroy'])->name('destroy');
 });

@@ -2,6 +2,7 @@
 import { ref, computed } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import Sidebar from "@/Components/Sidebar.vue";
+import NotificationBell from "@/Components/UI/NotificationBell.vue";
 
 const page = usePage();
 const showingNavigationDropdown = ref(false);
@@ -110,6 +111,11 @@ const handleClickOutside = (event) => {
                         </div>
 
                         <div class="flex items-center">
+                            <!-- Notification Bell -->
+                            <div class="mr-4">
+                                <NotificationBell />
+                            </div>
+
                             <!-- User Dropdown -->
                             <div class="relative ml-3">
                                 <div class="flex items-center space-x-4">

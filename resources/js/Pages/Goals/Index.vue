@@ -94,6 +94,15 @@
                         {{ formatDate(item.target_date) }}
                     </template>
                 </DataTable>
+
+                <!-- Pagination -->
+                <Pagination
+                    :links="goalsPagination.links"
+                    :from="goalsPagination.from"
+                    :to="goalsPagination.to"
+                    :total="goalsPagination.total"
+                    @navigate="handlePageChange"
+                />
             </div>
         </div>
 
@@ -118,9 +127,11 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import DataTable from "@/Components/DataTable.vue";
 import FormModal from "@/Components/FormModal.vue";
 import SearchFilter from "@/Components/SearchFilter.vue";
+import Pagination from "@/Components/Pagination.vue";
 
 // Reactive data
 const goals = ref([]);
+const goalsPagination = ref({});
 const loading = ref(false);
 const showModal = ref(false);
 const isEdit = ref(false);
@@ -204,6 +215,22 @@ const formFields = [
         min: 0,
         step: 0.01,
     },
+    {
+        name: "budget",
+        label: "Budget ($)",
+        type: "number",
+        required: false,
+        min: 0,
+        step: 0.01,
+    },
+    {
+        name: "labor_hours",
+        label: "Labor Hours",
+        type: "number",
+        required: false,
+        min: 0,
+        step: 0.01,
+    },
     { name: "target_date", label: "Target Date", type: "date", required: true },
     {
         name: "priority",
@@ -255,6 +282,7 @@ const fetchGoals = () => {
     router.get("/goals", filters.value, {
         preserveState: true,
         onSuccess: (page) => {
+            goalsPagination.value = page.props.goals;
             goals.value = page.props.goals.data || page.props.goals;
             loading.value = false;
         },
@@ -270,7 +298,7 @@ const createGoal = () => {
 };
 
 const editGoal = (goal) => {
-    router.visit(`/goals/${sale.id}/edit`);
+    router.visit(`/goals/${goal.id}/edit`);
 };
 
 const viewGoal = (goal) => {
@@ -339,6 +367,14 @@ const clearFilters = () => {
         date_to: "",
     };
     fetchGoals();
+};
+
+const handlePageChange = (url) => {
+    router.visit(url, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ["goals", "filters"],
+    });
 };
 
 // Utility functions

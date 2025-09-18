@@ -52,7 +52,7 @@ class TaskSeeder extends Seeder
         ];
 
         $priorities = ['low', 'medium', 'high', 'urgent'];
-        $statuses = ['pending', 'in_progress', 'completed', 'cancelled'];
+        $statuses = ['pending', 'in_progress', 'completed', 'cancelled', 'not_started'];
         $categories = ['Marketing', 'Sales', 'Operations', 'Finance', 'Client Relations', 'Product Development', 'Administration'];
 
         // Create tasks for the last 2 months
@@ -231,11 +231,11 @@ class TaskSeeder extends Seeder
     private function generateTaskNotes(string $status): string
     {
         $notes = [
+            'not_started' => 'Task has not been started yet',
             'pending' => 'Task is waiting to be started',
             'in_progress' => 'Currently working on this task',
             'completed' => 'Task completed successfully',
             'cancelled' => 'Task cancelled due to changing priorities',
-            'on_hold' => 'Task temporarily on hold pending further information',
         ];
 
         return $notes[$status] ?? 'No additional notes';

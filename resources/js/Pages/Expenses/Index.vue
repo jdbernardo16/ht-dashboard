@@ -30,6 +30,7 @@
                     :columns="columns"
                     :filters="tableFilters"
                     :pagination="expenses"
+                    :loading="loading"
                     @create="createExpense"
                     @view="viewExpense"
                     @edit="editExpense"
@@ -58,6 +59,15 @@
                         {{ item.category }}
                     </template>
                 </DataTable>
+
+                <!-- Pagination -->
+                <Pagination
+                    :links="expenses.links"
+                    :from="expenses.from"
+                    :to="expenses.to"
+                    :total="expenses.total"
+                    @navigate="handlePageChange"
+                />
             </div>
         </div>
 
@@ -76,17 +86,19 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { router, useForm, usePage } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import DataTable from "@/Components/DataTable.vue";
 import FormModal from "@/Components/FormModal.vue";
 import SearchFilter from "@/Components/SearchFilter.vue";
+import Pagination from "@/Components/Pagination.vue";
 
 // Props from Inertia
 const { expenses, filters: initialFilters } = usePage().props;
 
 // Reactive data
+const loading = ref(false);
 const showModal = ref(false);
 const isEdit = ref(false);
 const formModal = ref(null);
@@ -144,6 +156,7 @@ const categoryOptions = [
     { value: "Travel", label: "Travel" },
     { value: "Utilities", label: "Utilities" },
     { value: "Marketing", label: "Marketing" },
+    { value: "Inventory", label: "Inventory" },
 ];
 
 // Form fields
@@ -155,7 +168,13 @@ const formFields = [
         required: true,
         options: categoryOptions,
     },
-    { name: "description", label: "Description", type: "text", required: true },
+    { name: "title", label: "Title", type: "text", required: true },
+    {
+        name: "description",
+        label: "Description",
+        type: "textarea",
+        required: true,
+    },
     {
         name: "amount",
         label: "Amount",
@@ -274,9 +293,25 @@ const closeModal = () => {
 };
 
 const applyFilters = () => {
-    router.get("/expenses", filters.value, {
+    loading.value = true;
+    const params = {};
+    Object.keys(filters.value).forEach((key) => {
+        if (filters.value[key]) params[key] = filters.value[key];
+    });
+
+    router.get("/expenses", params, {
         preserveState: true,
         preserveScroll: true,
+        only: ["expenses", "filters"],
+        onError: (errors) => {
+            console.error("Error applying filters:", errors);
+            if (errors.message?.includes("403")) {
+                alert("You don't have permission to view expenses.");
+            }
+        },
+        onFinish: () => {
+            loading.value = false;
+        },
     });
 };
 
@@ -292,6 +327,26 @@ const clearFilters = () => {
     };
     applyFilters();
 };
+
+const handlePageChange = (url) => {
+    router.visit(url, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ["expenses", "filters"],
+    });
+};
+
+// Watch for filter changes
+watch(
+    filters,
+    () => {
+        clearTimeout(window.filterTimeout);
+        window.filterTimeout = setTimeout(() => {
+            applyFilters();
+        }, 300);
+    },
+    { deep: true }
+);
 
 // Utility functions
 const formatCurrency = (value) => {

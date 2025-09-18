@@ -15,6 +15,8 @@ class Goal extends Model
         'description',
         'target_value',
         'current_value',
+        'budget',
+        'labor_hours',
         'quarter',
         'year',
         'deadline',
@@ -27,6 +29,8 @@ class Goal extends Model
     protected $casts = [
         'target_value' => 'decimal:2',
         'current_value' => 'decimal:2',
+        'budget' => 'decimal:2',
+        'labor_hours' => 'decimal:2',
         'deadline' => 'date',
         'progress' => 'decimal:2',
     ];
