@@ -487,9 +487,9 @@
                                     :multiple="false"
                                     accept="image/*"
                                     :maxFiles="1"
-                                    :maxSize="2 * 1024 * 1024"
+                                    :maxSize="10 * 1024 * 1024"
                                     title="Drag & drop image here or click to browse"
-                                    description="Supports JPG, PNG, GIF images (max 2MB)"
+                                    description="Supports JPG, PNG, GIF, WebP images (max 10MB - will be optimized)"
                                     @error="handleFileError"
                                 />
                                 <p class="text-xs text-gray-500 mt-2">
@@ -852,14 +852,12 @@ const submitForm = () => {
         formData.append("tags", JSON.stringify(form.tags));
     }
 
-    // Use FormData for the put request with proper headers
+    // Use FormData for the put request - let browser set Content-Type automatically
     form.put(
         route("content.web.update", props.contentPost.id),
         {
             data: formData,
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
+            // Remove manual Content-Type header - browser sets it automatically with boundary
         },
         {
             preserveScroll: true,

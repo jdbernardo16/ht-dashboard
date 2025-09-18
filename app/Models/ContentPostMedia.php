@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Services\ImageService;
+use Illuminate\Support\Facades\Log;
 
 class ContentPostMedia extends Model
 {
@@ -26,6 +28,38 @@ class ContentPostMedia extends Model
         'is_primary' => 'boolean',
         'file_size' => 'integer',
     ];
+
+    /**
+     * Boot the model
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Clean up file when media record is being deleted
+        static::deleting(function ($media) {
+            try {
+                $imageService = app(ImageService::class);
+
+                if ($media->file_path) {
+                    $imageService->deleteImage($media->file_path);
+                    Log::info('ContentPostMedia file cleaned up during model deletion', [
+                        'media_id' => $media->id,
+                        'file_path' => $media->file_path
+                    ]);
+                }
+
+            } catch (\Exception $e) {
+                Log::error('Failed to clean up file during ContentPostMedia deletion', [
+                    'media_id' => $media->id,
+                    'file_path' => $media->file_path,
+                    'error' => $e->getMessage()
+                ]);
+
+                // Don't prevent deletion, just log the error
+            }
+        });
+    }
 
     public function contentPost()
     {

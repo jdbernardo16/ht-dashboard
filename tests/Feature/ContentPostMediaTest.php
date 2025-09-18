@@ -34,7 +34,7 @@ class ContentPostMediaTest extends TestCase
 
         $file = UploadedFile::fake()->image('content-image.jpg');
         
-        $response = $this->post(route('content.store'), [
+        $response = $this->post(route('content.web.store'), [
             'client_id' => $this->user->id,
             'title' => 'Test Content Post with Media',
             'platform' => ['website'],
@@ -44,7 +44,7 @@ class ContentPostMediaTest extends TestCase
             'media' => [$file],
         ]);
 
-        $response->assertRedirect(route('content.index'));
+        $response->assertRedirect(route('content.web.index'));
         
         $contentPost = ContentPost::where('title', 'Test Content Post with Media')->first();
         
@@ -70,7 +70,7 @@ class ContentPostMediaTest extends TestCase
         // Try to upload an invalid file type
         $invalidFile = UploadedFile::fake()->create('document.exe', 1000);
         
-        $response = $this->post(route('content.store'), [
+        $response = $this->post(route('content.web.store'), [
             'client_id' => $this->user->id,
             'title' => 'Test Content Post with Invalid File',
             'platform' => ['website'],
@@ -89,7 +89,7 @@ class ContentPostMediaTest extends TestCase
         // Try to upload a file that's too large (15MB)
         $largeFile = UploadedFile::fake()->create('large-image.jpg', 15000); // 15MB
         
-        $response = $this->post(route('content.store'), [
+        $response = $this->post(route('content.web.store'), [
             'client_id' => $this->user->id,
             'title' => 'Test Content Post with Large File',
             'platform' => ['website'],
@@ -113,7 +113,7 @@ class ContentPostMediaTest extends TestCase
             UploadedFile::fake()->create('document.pdf', 500),
         ];
         
-        $response = $this->post(route('content.store'), [
+        $response = $this->post(route('content.web.store'), [
             'client_id' => $this->user->id,
             'title' => 'Test Content Post with Multiple Files',
             'platform' => ['website'],
@@ -123,7 +123,7 @@ class ContentPostMediaTest extends TestCase
             'media' => $files,
         ]);
 
-        $response->assertRedirect(route('content.index'));
+        $response->assertRedirect(route('content.web.index'));
         
         $contentPost = ContentPost::where('title', 'Test Content Post with Multiple Files')->first();
         
@@ -145,7 +145,7 @@ class ContentPostMediaTest extends TestCase
         
         $file = UploadedFile::fake()->image('update-image.jpg');
         
-        $response = $this->put(route('content.update', $contentPost->id), [
+        $response = $this->put(route('content.web.update', $contentPost->id), [
             'title' => 'Updated Content Post with Media',
             'platform' => ['website'],
             'content_type' => 'post',
@@ -168,7 +168,7 @@ class ContentPostMediaTest extends TestCase
     public function it_handles_file_uploads_without_media_for_content_posts()
     {
         // Test that the content post can be created without any files
-        $response = $this->post(route('content.store'), [
+        $response = $this->post(route('content.web.store'), [
             'client_id' => $this->user->id,
             'title' => 'Test Content Post without Media',
             'platform' => ['website'],
@@ -177,7 +177,7 @@ class ContentPostMediaTest extends TestCase
             'status' => 'draft',
         ]);
 
-        $response->assertRedirect(route('content.index'));
+        $response->assertRedirect(route('content.web.index'));
         
         $this->assertDatabaseHas('content_posts', [
             'title' => 'Test Content Post without Media',

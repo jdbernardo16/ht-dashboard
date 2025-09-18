@@ -345,25 +345,20 @@
                             <!-- Image Upload -->
                             <div>
                                 <InputLabel value="Upload Image" class="mb-2" />
-                                <FileUpload
+                                <BaseFileUploader
                                     v-model="form.image"
+                                    label="Main Image"
+                                    :acceptTypes="['image']"
                                     :multiple="false"
-                                    accept="image/*"
-                                    :maxFiles="1"
-                                    :maxSize="2 * 1024 * 1024"
-                                    title="Drag & drop image here or click to browse"
-                                    description="Supports JPG, PNG, GIF images (max 2MB)"
-                                    @error="handleFileError"
+                                    :maxSize="10"
+                                    description="Drag & drop image here or click to browse"
+                                    :withPreview="true"
+                                    :required="false"
+                                    :error="errors.image"
                                 />
                                 <p class="text-xs text-gray-500 mt-2">
                                     Upload a single image file. Supported
-                                    formats: JPG, PNG, GIF.
-                                </p>
-                                <p
-                                    v-if="errors.image"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.image }}
+                                    formats: JPG, PNG, GIF, WebP (max 10MB)
                                 </p>
                             </div>
 
@@ -373,25 +368,26 @@
                                     value="Upload Additional Files"
                                     class="mb-2"
                                 />
-                                <FileUpload
+                                <BaseFileUploader
                                     v-model="form.media"
+                                    label="Additional Files"
+                                    :acceptTypes="[
+                                        'image',
+                                        'pdf',
+                                        'xlsx',
+                                        'csv',
+                                    ]"
                                     :multiple="true"
-                                    accept="image/*,.pdf,.doc,.docx,.txt"
-                                    :maxFiles="10"
-                                    :maxSize="10 * 1024 * 1024"
-                                    title="Drag & drop files here or click to browse"
-                                    description="Supports images, PDFs, and documents (max 10MB each)"
-                                    @error="handleFileError"
+                                    :maxSize="10"
+                                    description="Drag & drop files here or click to browse"
+                                    :withPreview="false"
+                                    :required="false"
+                                    :error="errors.media"
                                 />
                                 <p class="text-xs text-gray-500 mt-2">
                                     You can upload up to 10 files. Supported
-                                    formats: JPG, PNG, GIF, PDF, DOC, DOCX, TXT.
-                                </p>
-                                <p
-                                    v-if="errors.media"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.media }}
+                                    formats: JPG, PNG, GIF, PDF, Excel, CSV (max
+                                    10MB each)
                                 </p>
                             </div>
 
@@ -427,12 +423,12 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { router, useForm } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
-import FileUpload from "@/Components/UI/FileUpload.vue";
+import BaseFileUploader from "@/Components/Shared/Fields/BaseFileUploader.vue";
 
 const props = defineProps({
     clients: {
@@ -464,7 +460,7 @@ const form = useForm({
     content_type: "",
     description: "",
     content_url: "",
-    image: null,
+    image: null, // This will store either File object or FileData object
     post_count: 1,
     scheduled_date: "",
     published_date: "",
@@ -474,6 +470,26 @@ const form = useForm({
     notes: "",
     media: [],
 });
+
+// Watch for changes to the image field and extract File object if it's a FileData object
+watch(
+    () => form.image,
+    (newImage) => {
+        if (
+            newImage &&
+            typeof newImage === "object" &&
+            newImage.file instanceof File
+        ) {
+            // If it's a FileData object with a file property, extract the File object
+            form.image = newImage.file;
+            console.log(
+                "Extracted File object from FileData:",
+                newImage.file.name
+            );
+        }
+    },
+    { deep: true }
+);
 
 const handleFileError = (error) => {
     errors.value.media = error;
@@ -498,12 +514,25 @@ const submitForm = () => {
     Object.keys(form.data()).forEach((key) => {
         if (key === "media") {
             // Handle media file uploads (multiple files)
-            form.media.forEach((file, index) => {
-                formData.append(`media[${index}]`, file);
-            });
-        } else if (key === "image" && form.image instanceof File) {
-            // Handle single image file upload
-            formData.append(key, form.image);
+            if (Array.isArray(form.media)) {
+                form.media.forEach((fileData, index) => {
+                    if (fileData?.file instanceof File) {
+                        formData.append(`media[${index}]`, fileData.file);
+                    }
+                });
+            }
+        } else if (key === "image") {
+            console.log("Processing image field:", form.image);
+            // Handle single image file upload - should now be a direct File object
+            if (form.image && form.image instanceof File) {
+                formData.append(key, form.image);
+                console.log("Appended image file:", form.image.name);
+            } else {
+                console.log(
+                    "Image field is not a valid File object:",
+                    form.image
+                );
+            }
         } else if (Array.isArray(form[key])) {
             // Handle arrays (like platform)
             form[key].forEach((item, index) => {
@@ -519,16 +548,20 @@ const submitForm = () => {
         formData.append(`tags[${index}]`, tag);
     });
 
-    // Use FormData for the post request
+    // Debug: Log what's in the formData for image field
+    console.log("FormData image field:", formData.get("image"));
+    console.log("Form image field value:", form.image);
+    console.log("Form image field type:", typeof form.image);
+
+    // Use FormData for the post request - let browser set Content-Type automatically
     form.post(route("content.web.store"), {
         data: formData,
-        headers: {
-            "Content-Type": "multipart/form-data",
-        },
+        // Remove manual Content-Type header - browser sets it automatically with boundary
         onSuccess: () => {
             router.visit(route("content.web.index"));
         },
         onError: (error) => {
+            console.error("Form submission error:", error);
             errors.value = error;
         },
         onFinish: () => {

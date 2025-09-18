@@ -87,6 +87,9 @@ Route::middleware(['auth', 'verified'])->prefix('content')->group(function () {
     Route::get('/{contentPost}/edit', [ContentPostController::class, 'edit'])->name('content.web.edit');
     Route::put('/{contentPost}', [ContentPostController::class, 'update'])->name('content.web.update');
     Route::delete('/{contentPost}', [ContentPostController::class, 'destroy'])->name('content.web.destroy');
+
+    // Temporary file upload
+    Route::post('/temporary-upload', [ContentPostController::class, 'temporaryUpload'])->name('content.temporary-upload');
 });
 
 // Expenses Routes
