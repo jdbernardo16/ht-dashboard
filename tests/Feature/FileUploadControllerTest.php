@@ -60,16 +60,13 @@ class FileUploadControllerTest extends TestCase
             ]);
 
         $data = $response->json('data');
-        
+
         // Verify file was stored
         Storage::disk('public')->assertExists($data['file_path']);
-        
-        // Verify database record was created
-        $this->assertDatabaseHas('content_post_media', [
-            'file_name' => $data['file_name'],
-            'original_name' => 'test-image.jpg',
-            'user_id' => $this->user->id
-        ]);
+
+        // Note: We no longer create ContentPostMedia records in FileUploadController
+        // Files uploaded through this controller are temporary and should be associated with content posts
+        // through the ContentPostController's processMediaUploads method
     }
 
     /** @test */
@@ -104,9 +101,9 @@ class FileUploadControllerTest extends TestCase
             ]);
 
         $data = $response->json('data');
-        
+
         $this->assertCount(2, $data);
-        
+
         foreach ($data as $fileData) {
             Storage::disk('public')->assertExists($fileData['file_path']);
         }
@@ -179,6 +176,35 @@ class FileUploadControllerTest extends TestCase
         $fileData = $uploadResponse->json('data');
         $fileName = basename($fileData['file_path']);
 
+        // Create a ContentPost first
+        $client = new \App\Models\Client();
+        $client->first_name = 'Test';
+        $client->last_name = 'Client';
+        $client->email = 'test@example.com';
+        $client->save();
+
+        $contentPost = \App\Models\ContentPost::create([
+            'user_id' => $this->user->id,
+            'client_id' => $client->id,
+            'platform' => ['website'],
+            'content_type' => 'blog',
+            'title' => 'Test Content Post',
+            'status' => 'draft',
+        ]);
+
+        // Create a ContentPostMedia record manually for testing deletion
+        $media = ContentPostMedia::create([
+            'content_post_id' => $contentPost->id,
+            'user_id' => $this->user->id,
+            'file_name' => $fileData['file_name'],
+            'file_path' => $fileData['file_path'],
+            'mime_type' => $fileData['mime_type'],
+            'file_size' => $fileData['file_size'],
+            'original_name' => $fileData['original_name'],
+            'order' => 0,
+            'is_primary' => false,
+        ]);
+
         // Now delete the file
         $response = $this->deleteJson("/api/upload/{$fileName}");
 
@@ -190,7 +216,7 @@ class FileUploadControllerTest extends TestCase
 
         // Verify file was deleted from storage
         Storage::disk('public')->assertMissing($fileData['file_path']);
-        
+
         // Verify database record was deleted
         $this->assertDatabaseMissing('content_post_media', [
             'file_name' => $fileData['file_name']
@@ -223,6 +249,35 @@ class FileUploadControllerTest extends TestCase
 
         $fileData = $uploadResponse->json('data');
         $fileName = basename($fileData['file_path']);
+
+        // Create a ContentPost first
+        $client = new \App\Models\Client();
+        $client->first_name = 'Test';
+        $client->last_name = 'Client';
+        $client->email = 'test2@example.com';
+        $client->save();
+
+        $contentPost = \App\Models\ContentPost::create([
+            'user_id' => $this->user->id,
+            'client_id' => $client->id,
+            'platform' => ['website'],
+            'content_type' => 'blog',
+            'title' => 'Test Content Post',
+            'status' => 'draft',
+        ]);
+
+        // Create a ContentPostMedia record manually for testing deletion
+        $media = ContentPostMedia::create([
+            'content_post_id' => $contentPost->id,
+            'user_id' => $this->user->id,
+            'file_name' => $fileData['file_name'],
+            'file_path' => $fileData['file_path'],
+            'mime_type' => $fileData['mime_type'],
+            'file_size' => $fileData['file_size'],
+            'original_name' => $fileData['original_name'],
+            'order' => 0,
+            'is_primary' => false,
+        ]);
 
         // Create a different user and try to delete the file
         $otherUser = User::factory()->create(['role' => 'va']);
@@ -285,7 +340,7 @@ class FileUploadControllerTest extends TestCase
             ]);
 
         $data = $response->json('data');
-        
+
         $this->assertEquals('application/pdf', $data['mime_type']);
         Storage::disk('public')->assertExists($data['file_path']);
     }
@@ -295,8 +350,11 @@ class FileUploadControllerTest extends TestCase
     {
         Storage::fake('public');
 
-        $excelFile = UploadedFile::fake()->create('spreadsheet.xlsx', 300, 
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $excelFile = UploadedFile::fake()->create(
+            'spreadsheet.xlsx',
+            300,
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
 
         $response = $this->postJson('/api/upload', [
             'file' => $excelFile,
@@ -310,7 +368,7 @@ class FileUploadControllerTest extends TestCase
             ]);
 
         $data = $response->json('data');
-        
+
         $this->assertEquals('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', $data['mime_type']);
         Storage::disk('public')->assertExists($data['file_path']);
     }
@@ -334,7 +392,7 @@ class FileUploadControllerTest extends TestCase
             ]);
 
         $data = $response->json('data');
-        
+
         $this->assertEquals('text/csv', $data['mime_type']);
         Storage::disk('public')->assertExists($data['file_path']);
     }

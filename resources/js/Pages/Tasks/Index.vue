@@ -6,7 +6,7 @@
             </h2>
         </template>
 
-        <div class="py-12">
+        <div>
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <!-- Search and Filter Bar -->
                 <div class="bg-white rounded-lg shadow-sm p-6 mb-6">

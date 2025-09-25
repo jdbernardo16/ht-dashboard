@@ -117,14 +117,7 @@ const handlePeriodChange = (event) => {
             </div>
         </template>
 
-        <div
-            style="
-                padding: 2rem 1rem;
-                max-width: 80rem;
-                margin-left: auto;
-                margin-right: auto;
-            "
-        >
+        <div style="padding: 1rem; margin-left: auto; margin-right: auto">
             <div>
                 <DashboardGrid>
                     <!-- Row 1 -->

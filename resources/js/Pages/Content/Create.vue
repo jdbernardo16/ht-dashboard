@@ -6,24 +6,22 @@
             </h2>
         </template>
 
-        <div class="py-12">
+        <div>
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6 text-gray-900">
                         <form @submit.prevent="submitForm" class="space-y-6">
                             <!-- Client -->
                             <div>
-                                <label
-                                    for="client_id"
-                                    class="block text-sm font-medium text-gray-700"
-                                >
-                                    Client *
-                                </label>
+                                <InputLabel for="client_id" value="Client *" />
                                 <select
                                     id="client_id"
                                     v-model="form.client_id"
                                     required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    :class="{
+                                        'border-red-500': form.errors.client_id,
+                                    }"
                                 >
                                     <option value="">Select a client</option>
                                     <option
@@ -34,44 +32,34 @@
                                         {{ client.name }}
                                     </option>
                                 </select>
-                                <p
-                                    v-if="errors.client_id"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.client_id }}
-                                </p>
+                                <InputError
+                                    :message="form.errors.client_id"
+                                    class="mt-2"
+                                />
                             </div>
 
                             <!-- Title -->
                             <div>
-                                <label
-                                    for="title"
-                                    class="block text-sm font-medium text-gray-700"
-                                >
-                                    Title *
-                                </label>
-                                <input
-                                    type="text"
+                                <InputLabel for="title" value="Title *" />
+                                <TextInput
                                     id="title"
                                     v-model="form.title"
+                                    type="text"
+                                    class="mt-1 block w-full"
                                     required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    :class="{
+                                        'border-red-500': form.errors.title,
+                                    }"
                                 />
-                                <p
-                                    v-if="errors.title"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.title }}
-                                </p>
+                                <InputError
+                                    :message="form.errors.title"
+                                    class="mt-2"
+                                />
                             </div>
 
                             <!-- Platform -->
                             <div>
-                                <label
-                                    class="block text-sm font-medium text-gray-700 mb-2"
-                                >
-                                    Platforms *
-                                </label>
+                                <InputLabel value="Platforms *" class="mb-2" />
                                 <div
                                     class="grid grid-cols-2 md:grid-cols-3 gap-3"
                                 >
@@ -95,27 +83,27 @@
                                         </label>
                                     </div>
                                 </div>
-                                <p
-                                    v-if="errors.platform"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.platform }}
-                                </p>
+                                <InputError
+                                    :message="form.errors.platform"
+                                    class="mt-2"
+                                />
                             </div>
 
                             <!-- Content Type -->
                             <div>
-                                <label
+                                <InputLabel
                                     for="content_type"
-                                    class="block text-sm font-medium text-gray-700"
-                                >
-                                    Content Type *
-                                </label>
+                                    value="Content Type *"
+                                />
                                 <select
                                     id="content_type"
                                     v-model="form.content_type"
                                     required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.content_type,
+                                    }"
                                 >
                                     <option value="">
                                         Select content type
@@ -129,12 +117,10 @@
                                     <option value="live">Live</option>
                                     <option value="article">Article</option>
                                 </select>
-                                <p
-                                    v-if="errors.content_type"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.content_type }}
-                                </p>
+                                <InputError
+                                    :message="form.errors.content_type"
+                                    class="mt-2"
+                                />
                             </div>
 
                             <!-- Description -->
@@ -162,183 +148,364 @@
 
                             <!-- Content URL -->
                             <div>
-                                <label
+                                <InputLabel
                                     for="content_url"
-                                    class="block text-sm font-medium text-gray-700"
-                                >
-                                    Content URL
-                                </label>
-                                <input
-                                    type="url"
+                                    value="Content URL"
+                                />
+                                <TextInput
                                     id="content_url"
                                     v-model="form.content_url"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    type="url"
+                                    class="mt-1 block w-full"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.content_url,
+                                    }"
                                 />
-                                <p
-                                    v-if="errors.content_url"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.content_url }}
-                                </p>
+                                <InputError
+                                    :message="form.errors.content_url"
+                                    class="mt-2"
+                                />
                             </div>
 
                             <!-- Post Count -->
                             <div>
-                                <label
+                                <InputLabel
                                     for="post_count"
-                                    class="block text-sm font-medium text-gray-700"
-                                >
-                                    Post Count
-                                </label>
-                                <input
-                                    type="number"
+                                    value="Post Count"
+                                />
+                                <TextInput
                                     id="post_count"
                                     v-model="form.post_count"
+                                    type="number"
                                     min="1"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="mt-1 block w-full"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.post_count,
+                                    }"
                                 />
-                                <p
-                                    v-if="errors.post_count"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.post_count }}
-                                </p>
+                                <InputError
+                                    :message="form.errors.post_count"
+                                    class="mt-2"
+                                />
                             </div>
 
                             <!-- Scheduled Date -->
                             <div>
-                                <label
+                                <InputLabel
                                     for="scheduled_date"
-                                    class="block text-sm font-medium text-gray-700"
-                                >
-                                    Scheduled Date
-                                </label>
-                                <input
-                                    type="date"
+                                    value="Scheduled Date"
+                                />
+                                <TextInput
                                     id="scheduled_date"
                                     v-model="form.scheduled_date"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    type="date"
+                                    class="mt-1 block w-full"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.scheduled_date,
+                                    }"
                                 />
-                                <p
-                                    v-if="errors.scheduled_date"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.scheduled_date }}
-                                </p>
+                                <InputError
+                                    :message="form.errors.scheduled_date"
+                                    class="mt-2"
+                                />
                             </div>
 
                             <!-- Published Date -->
                             <div>
-                                <label
+                                <InputLabel
                                     for="published_date"
-                                    class="block text-sm font-medium text-gray-700"
-                                >
-                                    Published Date
-                                </label>
-                                <input
-                                    type="date"
+                                    value="Published Date"
+                                />
+                                <TextInput
                                     id="published_date"
                                     v-model="form.published_date"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    type="date"
+                                    class="mt-1 block w-full"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.published_date,
+                                    }"
                                 />
-                                <p
-                                    v-if="errors.published_date"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.published_date }}
-                                </p>
+                                <InputError
+                                    :message="form.errors.published_date"
+                                    class="mt-2"
+                                />
                             </div>
 
                             <!-- Status -->
                             <div>
-                                <label
-                                    for="status"
-                                    class="block text-sm font-medium text-gray-700"
-                                >
-                                    Status *
-                                </label>
+                                <InputLabel for="status" value="Status *" />
                                 <select
                                     id="status"
                                     v-model="form.status"
                                     required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    :class="{
+                                        'border-red-500': form.errors.status,
+                                    }"
                                 >
                                     <option value="draft">Draft</option>
                                     <option value="scheduled">Scheduled</option>
                                     <option value="published">Published</option>
                                     <option value="archived">Archived</option>
                                 </select>
-                                <p
-                                    v-if="errors.status"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.status }}
-                                </p>
+                                <InputError
+                                    :message="form.errors.status"
+                                    class="mt-2"
+                                />
                             </div>
 
                             <!-- Content Category -->
                             <div>
-                                <label
+                                <InputLabel
                                     for="content_category"
-                                    class="block text-sm font-medium text-gray-700"
-                                >
-                                    Content Category
-                                </label>
-                                <input
-                                    type="text"
+                                    value="Content Category"
+                                />
+                                <TextInput
                                     id="content_category"
                                     v-model="form.content_category"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    type="text"
+                                    class="mt-1 block w-full"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.content_category,
+                                    }"
                                 />
-                                <p
-                                    v-if="errors.content_category"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.content_category }}
-                                </p>
+                                <InputError
+                                    :message="form.errors.content_category"
+                                    class="mt-2"
+                                />
                             </div>
 
                             <!-- Tags -->
                             <div>
-                                <label
-                                    for="tags"
-                                    class="block text-sm font-medium text-gray-700"
-                                >
-                                    Tags (comma separated)
-                                </label>
-                                <input
-                                    type="text"
-                                    id="tags"
-                                    v-model="form.tags"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                <InputLabel for="tags" value="Tags" />
+                                <div class="mt-1">
+                                    <!-- Tag Input Container -->
+                                    <div class="relative">
+                                        <div
+                                            class="flex flex-wrap items-center gap-2 p-2 border border-gray-300 rounded-md shadow-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 min-h-12 transition-colors"
+                                            :class="{
+                                                'border-red-500':
+                                                    form.errors.tags,
+                                                'bg-gray-50': isTagInputFocused,
+                                            }"
+                                            @click="focusTagInput"
+                                        >
+                                            <!-- Existing Tags -->
+                                            <span
+                                                v-for="(
+                                                    tag, index
+                                                ) in currentTagsArray"
+                                                :key="index"
+                                                class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200 transition-all hover:bg-indigo-200 hover:scale-105"
+                                            >
+                                                {{ tag.trim() }}
+                                                <button
+                                                    type="button"
+                                                    @click.stop="
+                                                        removeTag(index)
+                                                    "
+                                                    class="text-indigo-600 hover:text-indigo-800 focus:outline-none transition-colors"
+                                                    title="Remove tag"
+                                                >
+                                                    <svg
+                                                        class="h-4 w-4"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M6 18L18 6M6 6l12 12"
+                                                        ></path>
+                                                    </svg>
+                                                </button>
+                                            </span>
+
+                                            <!-- Tag Input Field -->
+                                            <input
+                                                ref="tagInputRef"
+                                                type="text"
+                                                v-model="tagInput"
+                                                @keydown="handleTagInputKeydown"
+                                                @focus="
+                                                    isTagInputFocused = true
+                                                "
+                                                @blur="
+                                                    isTagInputFocused = false
+                                                "
+                                                @input="updateCurrentTagPreview"
+                                                placeholder="Type to add tags..."
+                                                class="flex-1 min-w-0 bg-transparent border-none outline-none py-1 px-2 text-sm placeholder-gray-400"
+                                                :class="{
+                                                    'opacity-50': loading,
+                                                }"
+                                                :disabled="loading"
+                                            />
+
+                                            <!-- Add Tag Button -->
+                                            <button
+                                                v-if="tagInput.trim()"
+                                                type="button"
+                                                @click.prevent.stop="
+                                                    addTagFromButton
+                                                "
+                                                class="text-indigo-600 hover:text-indigo-800 focus:outline-none transition-colors p-1 rounded"
+                                                title="Add tag"
+                                                :disabled="loading"
+                                            >
+                                                <svg
+                                                    class="h-5 w-5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                                    ></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+
+                                        <!-- Current Tag Preview -->
+                                        <div
+                                            v-if="currentTagPreview"
+                                            class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 p-2"
+                                        >
+                                            <div
+                                                class="text-sm text-gray-600 flex items-center justify-between"
+                                            >
+                                                <span
+                                                    >Press Enter or Comma to
+                                                    add:</span
+                                                >
+                                                <span
+                                                    class="font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded"
+                                                >
+                                                    {{ currentTagPreview }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tag Suggestions (if any) -->
+                                    <div
+                                        v-if="tagSuggestions.length > 0"
+                                        class="mt-1 p-2 bg-gray-50 border border-gray-200 rounded-md"
+                                    >
+                                        <p class="text-xs text-gray-500 mb-1">
+                                            Common tags:
+                                        </p>
+                                        <div class="flex flex-wrap gap-1">
+                                            <span
+                                                v-for="(
+                                                    suggestion, index
+                                                ) in tagSuggestions"
+                                                :key="index"
+                                                @click="
+                                                    addSuggestion(suggestion)
+                                                "
+                                                class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors cursor-pointer inline-block"
+                                                role="button"
+                                                tabindex="0"
+                                                @keydown.enter="
+                                                    addSuggestion(suggestion)
+                                                "
+                                                @keydown.space.prevent="
+                                                    addSuggestion(suggestion)
+                                                "
+                                            >
+                                                {{ suggestion }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <InputError
+                                    :message="form.errors.tags"
+                                    class="mt-2"
                                 />
-                                <p
-                                    v-if="errors.tags"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.tags }}
-                                </p>
                             </div>
 
                             <!-- Notes -->
                             <div>
-                                <label
-                                    for="notes"
-                                    class="block text-sm font-medium text-gray-700"
-                                >
-                                    Notes
-                                </label>
+                                <InputLabel for="notes" value="Notes" />
                                 <textarea
                                     id="notes"
                                     v-model="form.notes"
                                     rows="3"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    :class="{
+                                        'border-red-500': form.errors.notes,
+                                    }"
                                 ></textarea>
-                                <p
-                                    v-if="errors.notes"
-                                    class="mt-1 text-sm text-red-600"
-                                >
-                                    {{ errors.notes }}
+                                <InputError
+                                    :message="form.errors.notes"
+                                    class="mt-2"
+                                />
+                            </div>
+
+                            <!-- Meta Description -->
+                            <div>
+                                <InputLabel
+                                    for="meta_description"
+                                    value="Meta Description"
+                                />
+                                <textarea
+                                    id="meta_description"
+                                    v-model="form.meta_description"
+                                    rows="2"
+                                    maxlength="255"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.meta_description,
+                                    }"
+                                ></textarea>
+                                <InputError
+                                    :message="form.errors.meta_description"
+                                    class="mt-2"
+                                />
+                                <p class="text-xs text-gray-500 mt-1">
+                                    {{
+                                        form.meta_description
+                                            ? form.meta_description.length
+                                            : 0
+                                    }}/255 characters
+                                </p>
+                            </div>
+
+                            <!-- SEO Keywords -->
+                            <div>
+                                <InputLabel
+                                    for="seo_keywords"
+                                    value="SEO Keywords"
+                                />
+                                <TextInput
+                                    id="seo_keywords"
+                                    v-model="form.seo_keywords"
+                                    type="text"
+                                    maxlength="255"
+                                    class="mt-1 block w-full"
+                                    :class="{
+                                        'border-red-500':
+                                            form.errors.seo_keywords,
+                                    }"
+                                />
+                                <InputError
+                                    :message="form.errors.seo_keywords"
+                                    class="mt-2"
+                                />
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Separate keywords with commas
                                 </p>
                             </div>
 
@@ -354,7 +521,7 @@
                                     description="Drag & drop image here or click to browse"
                                     :withPreview="true"
                                     :required="false"
-                                    :error="errors.image"
+                                    :error="form.errors.image"
                                 />
                                 <p class="text-xs text-gray-500 mt-2">
                                     Upload a single image file. Supported
@@ -382,7 +549,7 @@
                                     description="Drag & drop files here or click to browse"
                                     :withPreview="false"
                                     :required="false"
-                                    :error="errors.media"
+                                    :error="form.errors.media"
                                 />
                                 <p class="text-xs text-gray-500 mt-2">
                                     You can upload up to 10 files. Supported
@@ -423,11 +590,12 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { router, useForm } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
+import TextInput from "@/Components/TextInput.vue";
 import BaseFileUploader from "@/Components/Shared/Fields/BaseFileUploader.vue";
 
 const props = defineProps({
@@ -438,7 +606,6 @@ const props = defineProps({
 });
 
 const loading = ref(false);
-const errors = ref({});
 
 const platformOptions = [
     { value: "website", label: "Website" },
@@ -466,12 +633,14 @@ const form = useForm({
     published_date: "",
     status: "draft",
     content_category: "",
-    tags: "",
+    tags: [],
     notes: "",
+    meta_description: "",
+    seo_keywords: "",
     media: [],
 });
 
-// Watch for changes to the image field and extract File object if it's a FileData object
+// Watch for changes to the image field and preserve both File object and preview
 watch(
     () => form.image,
     (newImage) => {
@@ -480,89 +649,261 @@ watch(
             typeof newImage === "object" &&
             newImage.file instanceof File
         ) {
-            // If it's a FileData object with a file property, extract the File object
-            form.image = newImage.file;
+            // If it's a FileData object with a file property, preserve the entire object
+            // to maintain both the file and preview data
+            // The form.image already contains the FileData object, so no need to modify it
             console.log(
-                "Extracted File object from FileData:",
-                newImage.file.name
+                "FileData object received with file:",
+                newImage.file.name,
+                "and preview:",
+                newImage.preview ? "available" : "not available"
             );
         }
     },
     { deep: true }
 );
 
-const handleFileError = (error) => {
-    errors.value.media = error;
+// Enhanced Tag Handling
+const tagInput = ref("");
+const tagInputRef = ref(null);
+const isTagInputFocused = ref(false);
+const currentTagPreview = ref("");
+const tagSuggestions = ref([
+    "social-media",
+    "blog",
+    "video",
+    "image",
+    "campaign",
+    "promotional",
+    "educational",
+    "entertainment",
+]);
+
+// Computed properties
+const currentTagsArray = computed(() => {
+    if (Array.isArray(form.tags)) {
+        return form.tags.filter((tag) => tag && tag.trim());
+    }
+    return [];
+});
+
+// Methods
+const focusTagInput = () => {
+    if (tagInputRef.value) {
+        tagInputRef.value.focus();
+    }
+};
+
+const updateCurrentTagPreview = () => {
+    const tagText = tagInput.value.trim();
+    currentTagPreview.value = tagText;
+};
+
+const handleTagInputKeydown = (event) => {
+    const tagText = tagInput.value.trim();
+
+    if (event.key === "Enter" || event.key === "," || event.keyCode === 188) {
+        event.preventDefault();
+        if (tagText) {
+            addTag(tagText);
+        }
+    } else if (
+        event.key === "Backspace" &&
+        !tagText &&
+        currentTagsArray.value.length > 0
+    ) {
+        // Remove last tag when backspace is pressed on empty input
+        event.preventDefault();
+        removeTag(currentTagsArray.value.length - 1);
+    }
+};
+
+const addTagFromButton = (event) => {
+    // Explicitly prevent any form submission
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    const tagText = tagInput.value.trim();
+    if (tagText) {
+        addTag(tagText);
+    }
+};
+
+const addTag = (tagText) => {
+    if (!tagText) return;
+
+    const trimmedTag = tagText.trim();
+    if (!trimmedTag) return;
+
+    // Add new tag if it doesn't already exist
+    if (!form.tags.includes(trimmedTag)) {
+        form.tags.push(trimmedTag);
+    }
+
+    // Clear input and reset preview
+    tagInput.value = "";
+    currentTagPreview.value = "";
+};
+
+const removeTag = (index) => {
+    // Remove tag at index
+    if (index >= 0 && index < form.tags.length) {
+        form.tags.splice(index, 1);
+    }
+};
+
+const addSuggestion = (suggestion) => {
+    addTag(suggestion);
 };
 
 const submitForm = () => {
     loading.value = true;
-    errors.value = {};
 
-    // Convert tags string to array
-    const tagsArray = form.tags
-        ? form.tags
-              .split(",")
-              .map((tag) => tag.trim())
-              .filter((tag) => tag)
-        : [];
+    // Create a copy of form data for processing
+    const formDataToProcess = { ...form.data() };
+
+    // Debug: Log all form data before processing
+    console.log("Original form data:", formDataToProcess);
+
+    // Fix client_id field handling - ensure it's not sending empty strings when null is expected
+    if (
+        formDataToProcess.client_id === "" ||
+        formDataToProcess.client_id === null
+    ) {
+        formDataToProcess.client_id = null;
+        console.log("Client ID set to null");
+    } else {
+        // Convert to number if it's a string
+        formDataToProcess.client_id = parseInt(formDataToProcess.client_id);
+        console.log(
+            "Client ID converted to number:",
+            formDataToProcess.client_id
+        );
+    }
+
+    // Fix date formatting for published_date field to ensure YYYY-MM-DD format
+    if (formDataToProcess.published_date) {
+        // If the date is already in YYYY-MM-DD format, keep it as is
+        // Otherwise, try to parse and reformat it
+        const date = new Date(formDataToProcess.published_date);
+        if (!isNaN(date.getTime())) {
+            // Format as YYYY-MM-DD
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            formDataToProcess.published_date = `${year}-${month}-${day}`;
+            console.log(
+                "Published date formatted:",
+                formDataToProcess.published_date
+            );
+        }
+    }
+
+    // Fix date formatting for scheduled_date field to ensure YYYY-MM-DD format
+    if (formDataToProcess.scheduled_date) {
+        // If the date is already in YYYY-MM-DD format, keep it as is
+        // Otherwise, try to parse and reformat it
+        const date = new Date(formDataToProcess.scheduled_date);
+        if (!isNaN(date.getTime())) {
+            // Format as YYYY-MM-DD
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            formDataToProcess.scheduled_date = `${year}-${month}-${day}`;
+            console.log(
+                "Scheduled date formatted:",
+                formDataToProcess.scheduled_date
+            );
+        }
+    }
+
+    // Fix nullable fields (content_url) to convert empty strings to null
+    if (formDataToProcess.content_url === "") {
+        formDataToProcess.content_url = null;
+        console.log("Content URL set to null");
+    }
 
     // Convert File objects to FormData for proper file upload
     const formData = new FormData();
 
-    // Add all form fields
-    Object.keys(form.data()).forEach((key) => {
+    // Add all processed form fields
+    Object.keys(formDataToProcess).forEach((key) => {
         if (key === "media") {
             // Handle media file uploads (multiple files)
-            if (Array.isArray(form.media)) {
-                form.media.forEach((fileData, index) => {
+            if (Array.isArray(formDataToProcess.media)) {
+                formDataToProcess.media.forEach((fileData, index) => {
                     if (fileData?.file instanceof File) {
                         formData.append(`media[${index}]`, fileData.file);
                     }
                 });
             }
         } else if (key === "image") {
-            console.log("Processing image field:", form.image);
-            // Handle single image file upload - should now be a direct File object
-            if (form.image && form.image instanceof File) {
-                formData.append(key, form.image);
-                console.log("Appended image file:", form.image.name);
+            console.log("Processing image field:", formDataToProcess.image);
+            // Handle single image file upload - extract File from FileData object
+            if (
+                formDataToProcess.image &&
+                formDataToProcess.image.file instanceof File
+            ) {
+                formData.append(key, formDataToProcess.image.file);
+                console.log(
+                    "Appended image file:",
+                    formDataToProcess.image.file.name
+                );
+            } else if (formDataToProcess.image instanceof File) {
+                formData.append(key, formDataToProcess.image);
+                console.log(
+                    "Appended direct File object:",
+                    formDataToProcess.image.name
+                );
             } else {
                 console.log(
-                    "Image field is not a valid File object:",
-                    form.image
+                    "Image field is not a valid File object or FileData:",
+                    formDataToProcess.image
                 );
             }
-        } else if (Array.isArray(form[key])) {
-            // Handle arrays (like platform)
-            form[key].forEach((item, index) => {
-                formData.append(`${key}[${index}]`, item);
-            });
+        } else if (Array.isArray(formDataToProcess[key])) {
+            // Handle arrays (like platform and tags) - ensure they're properly formatted as JSON
+            if (key === "platform" || key === "tags") {
+                formData.append(key, JSON.stringify(formDataToProcess[key]));
+            } else {
+                formDataToProcess[key].forEach((item, index) => {
+                    formData.append(`${key}[${index}]`, item);
+                });
+            }
         } else {
-            formData.append(key, form[key]);
+            // Handle null values properly
+            if (formDataToProcess[key] === null) {
+                formData.append(key, "");
+            } else {
+                formData.append(key, formDataToProcess[key]);
+            }
         }
     });
 
-    // Add tags array
-    tagsArray.forEach((tag, index) => {
-        formData.append(`tags[${index}]`, tag);
-    });
-
-    // Debug: Log what's in the formData for image field
+    // Debug: Log what's in the formData for key fields
+    console.log("FormData client_id:", formData.get("client_id"));
+    console.log("FormData published_date:", formData.get("published_date"));
+    console.log("FormData scheduled_date:", formData.get("scheduled_date"));
+    console.log("FormData content_url:", formData.get("content_url"));
     console.log("FormData image field:", formData.get("image"));
-    console.log("Form image field value:", form.image);
-    console.log("Form image field type:", typeof form.image);
+    console.log("Form image field value:", formDataToProcess.image);
+    console.log("Form image field type:", typeof formDataToProcess.image);
+
+    // Log the final form data for debugging
+    console.log("Final form data being submitted:");
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ":", pair[1]);
+    }
 
     // Use FormData for the post request - let browser set Content-Type automatically
     form.post(route("content.web.store"), {
         data: formData,
         // Remove manual Content-Type header - browser sets it automatically with boundary
         onSuccess: () => {
-            router.visit(route("content.web.index"));
+            // The controller now directly renders the Show page with the new content post
+            // No additional redirect needed as Inertia handles the page transition
         },
         onError: (error) => {
             console.error("Form submission error:", error);
-            errors.value = error;
         },
         onFinish: () => {
             loading.value = false;

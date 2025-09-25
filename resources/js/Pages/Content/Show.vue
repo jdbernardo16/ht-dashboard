@@ -1,37 +1,12 @@
 <template>
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex justify-between items-center">
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    Content Post Details
-                </h2>
-
-                <div class="flex space-x-2">
-                    <button
-                        @click="editContentPost"
-                        class="inline-flex items-center px-4 py-2 bg-yellow-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-yellow-700 focus:bg-yellow-700 active:bg-yellow-900 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition ease-in-out duration-150"
-                    >
-                        Edit
-                    </button>
-
-                    <button
-                        @click="deleteContentPost"
-                        class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 focus:bg-red-700 active:bg-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150"
-                    >
-                        Delete
-                    </button>
-
-                    <button
-                        @click="goBack"
-                        class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150"
-                    >
-                        Back
-                    </button>
-                </div>
-            </div>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                Content Post Details
+            </h2>
         </template>
 
-        <div class="py-12">
+        <div>
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6 text-gray-900">
@@ -280,6 +255,36 @@
                                         <dt
                                             class="text-sm font-medium text-gray-500"
                                         >
+                                            Meta Description
+                                        </dt>
+                                        <dd class="mt-1 text-sm text-gray-900">
+                                            {{
+                                                props.contentPost
+                                                    .meta_description ||
+                                                "No meta description provided"
+                                            }}
+                                        </dd>
+                                    </div>
+
+                                    <div>
+                                        <dt
+                                            class="text-sm font-medium text-gray-500"
+                                        >
+                                            SEO Keywords
+                                        </dt>
+                                        <dd class="mt-1 text-sm text-gray-900">
+                                            {{
+                                                props.contentPost
+                                                    .seo_keywords ||
+                                                "No SEO keywords provided"
+                                            }}
+                                        </dd>
+                                    </div>
+
+                                    <div>
+                                        <dt
+                                            class="text-sm font-medium text-gray-500"
+                                        >
                                             Created By
                                         </dt>
                                         <dd class="mt-1 text-sm text-gray-900">
@@ -320,6 +325,84 @@
                                         </dd>
                                     </div>
                                 </dl>
+                            </div>
+                        </div>
+
+                        <!-- Image Display -->
+                        <div v-if="props.contentPost.image" class="mt-8">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                                Main Image
+                            </h3>
+                            <div class="bg-gray-50 rounded-lg p-6">
+                                <img
+                                    :src="props.contentPost.image"
+                                    alt="Content post image"
+                                    class="max-w-full h-auto max-h-64 rounded-lg border shadow-sm"
+                                    onerror="this.style.display='none'"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Media Files Display -->
+                        <div
+                            v-if="
+                                props.contentPost.media &&
+                                props.contentPost.media.length > 0
+                            "
+                            class="mt-8"
+                        >
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                                Additional Files
+                            </h3>
+                            <div class="bg-gray-50 rounded-lg p-6">
+                                <div class="space-y-3">
+                                    <div
+                                        v-for="media in props.contentPost.media"
+                                        :key="media.id"
+                                        class="flex items-center justify-between p-3 bg-white rounded border shadow-sm"
+                                    >
+                                        <div
+                                            class="flex items-center space-x-3"
+                                        >
+                                            <svg
+                                                class="h-5 w-5 text-gray-400"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                                ></path>
+                                            </svg>
+                                            <div>
+                                                <p
+                                                    class="text-sm font-medium text-gray-900"
+                                                >
+                                                    {{ media.original_name }}
+                                                </p>
+                                                <p
+                                                    class="text-xs text-gray-500"
+                                                >
+                                                    {{
+                                                        formatFileSize(
+                                                            media.file_size
+                                                        )
+                                                    }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <a
+                                            :href="media.file_path"
+                                            target="_blank"
+                                            class="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                                        >
+                                            View
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -474,6 +557,30 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Action Buttons -->
+                        <div
+                            class="mt-8 flex items-center justify-end space-x-3"
+                        >
+                            <button
+                                @click="goBack"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            >
+                                Back
+                            </button>
+                            <button
+                                @click="editContentPost"
+                                class="px-4 py-2 text-sm font-medium text-white bg-yellow-600 border border-transparent rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+                            >
+                                Edit
+                            </button>
+                            <button
+                                @click="deleteContentPost"
+                                class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            >
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -576,6 +683,15 @@ const getStatusClass = (status) =>
     }[status] || "bg-gray-100 text-gray-800");
 
 const formatDateTime = (date) => new Date(date).toLocaleString();
+
+// Helper function to format file size
+const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
 
 const daysSinceCreated = computed(() => {
     const created = new Date(props.contentPost.created_at);

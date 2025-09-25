@@ -42,7 +42,7 @@ class FileUploadController extends Controller
 
             // Validate the file
             $validationResult = $this->fileValidationService->validate($file, $type, $maxSize);
-            
+
             if (!$validationResult['valid']) {
                 return response()->json([
                     'success' => false,
@@ -59,10 +59,9 @@ class FileUploadController extends Controller
                 'message' => 'File uploaded successfully',
                 'data' => $fileData
             ]);
-
         } catch (\Exception $e) {
             $fileName = $request->file('file')?->getClientOriginalName() ?? 'unknown';
-            
+
             Log::error('File upload failed', [
                 'error' => $e->getMessage(),
                 'file' => $fileName,
@@ -96,7 +95,7 @@ class FileUploadController extends Controller
 
             // Validate all files
             $validationResults = $this->fileValidationService->validateMultiple($files, $type, $maxSize);
-            
+
             $failedFiles = [];
             $validFiles = [];
 
@@ -132,7 +131,6 @@ class FileUploadController extends Controller
                 'message' => 'Files uploaded successfully',
                 'data' => $uploadedFiles
             ]);
-
         } catch (\Exception $e) {
             Log::error('Multiple file upload failed', [
                 'error' => $e->getMessage(),
@@ -198,20 +196,9 @@ class FileUploadController extends Controller
             ];
         }
 
-        // Create media record if user is authenticated
-        if (Auth::check()) {
-            ContentPostMedia::create([
-                'content_post_id' => null, // Can be associated later when content is created
-                'user_id' => Auth::id(),
-                'file_name' => $fileData['file_name'],
-                'file_path' => $fileData['file_path'],
-                'mime_type' => $fileData['mime_type'],
-                'file_size' => $fileData['file_size'],
-                'original_name' => $fileData['original_name'],
-                'order' => 0,
-                'is_primary' => false,
-            ]);
-        }
+        // Note: We no longer create ContentPostMedia records here since they require a content_post_id
+        // Files uploaded through this controller are temporary and should be associated with content posts
+        // through the ContentPostController's processMediaUploads method
 
         return $fileData;
     }
@@ -262,7 +249,6 @@ class FileUploadController extends Controller
                 'success' => true,
                 'message' => 'File deleted successfully'
             ]);
-
         } catch (\Exception $e) {
             Log::error('File deletion failed', [
                 'error' => $e->getMessage(),

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ContentPost;
 use App\Models\ContentPostMedia;
 use App\Models\User;
+use App\Models\Client;
 use App\Services\ImageService;
 use App\Services\FileValidationService;
 use Illuminate\Http\Request;
@@ -119,8 +120,7 @@ class ContentPostController extends Controller
     {
         Gate::authorize('create', ContentPost::class);
 
-        $clients = User::where('role', 'client')
-            ->select('id', 'first_name', 'last_name', 'email')
+        $clients = Client::select('id', 'first_name', 'last_name', 'email')
             ->orderBy('first_name')
             ->orderBy('last_name')
             ->get()
@@ -156,7 +156,7 @@ class ContentPostController extends Controller
             'has_image_input' => $request->has('image'),
             'image_file_info' => $request->hasFile('image') ? (
                 is_array($request->file('image')) ?
-                'Image is array: ' . json_encode(array_map(function($file) {
+                'Image is array: ' . json_encode(array_map(function ($file) {
                     return [
                         'original_name' => $file->getClientOriginalName(),
                         'mime_type' => $file->getMimeType(),
@@ -179,11 +179,21 @@ class ContentPostController extends Controller
             ) : 'No image file'
         ]);
 
+        // Handle platform JSON string conversion before validation
+        $requestData = $request->all();
+        if (isset($requestData['platform']) && is_string($requestData['platform'])) {
+            try {
+                $requestData['platform'] = json_decode($requestData['platform'], true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                // If JSON decoding fails, set to empty array
+                $requestData['platform'] = [];
+            }
+        }
+
         try {
             $validated = $request->validate([
-                'client_id' => 'required|exists:users,id',
-                'platform' => 'required|array',
-                'platform.*' => 'string|in:website,facebook,instagram,twitter,linkedin,tiktok,youtube,pinterest,email,other',
+                'client_id' => 'required|exists:clients,id',
+                'platform' => 'required|array', // Now expecting an array after JSON decode
                 'content_type' => 'required|string|max:255',
                 'title' => 'required|string|max:255',
                 'description' => 'nullable|string',
@@ -197,6 +207,8 @@ class ContentPostController extends Controller
                 'tags' => 'nullable',
                 'tags.*' => 'nullable|string',
                 'notes' => 'nullable|string',
+                'meta_description' => 'nullable|string|max:255',
+                'seo_keywords' => 'nullable|string|max:255',
                 'engagement_metrics' => 'nullable|array',
                 'media' => 'nullable|array',
                 'media.*' => 'file|mimes:jpeg,png,jpg,gif,pdf,doc,docx,txt|max:10240', // 10MB max
@@ -281,8 +293,42 @@ class ContentPostController extends Controller
             $this->processMediaUploads($request, $contentPost);
         }
 
-        return redirect()->route('content.web.index')
-            ->with('success', 'Content post created successfully');
+        return Inertia::render('Content/Show', [
+            'contentPost' => [
+                'id' => $contentPost->id,
+                'title' => $contentPost->title,
+                'description' => $contentPost->description,
+                'platform' => $contentPost->platform,
+                'content_type' => $contentPost->content_type,
+                'content_url' => $contentPost->content_url,
+                'image' => $contentPost->image,
+                'post_count' => $contentPost->post_count,
+                'scheduled_date' => $contentPost->scheduled_date,
+                'published_date' => $contentPost->published_date,
+                'status' => $contentPost->status,
+                'content_category' => $contentPost->content_category,
+                'tags' => $contentPost->tags,
+                'notes' => $contentPost->notes,
+                'meta_description' => $contentPost->meta_description,
+                'seo_keywords' => $contentPost->seo_keywords,
+                'engagement_metrics' => $contentPost->engagement_metrics,
+                'engagement_rate' => $contentPost->engagement_rate,
+                'total_engagement' => $contentPost->total_engagement,
+                'client' => $contentPost->client ? [
+                    'id' => $contentPost->client->id,
+                    'name' => $contentPost->client->first_name . ' ' . $contentPost->client->last_name,
+                    'email' => $contentPost->client->email,
+                ] : null,
+                'user' => [
+                    'id' => $contentPost->user->id,
+                    'name' => $contentPost->user->first_name . ' ' . $contentPost->user->last_name,
+                    'email' => $contentPost->user->email,
+                ],
+                'created_at' => $contentPost->created_at,
+                'updated_at' => $contentPost->updated_at,
+            ],
+            'success' => 'Content post created successfully'
+        ]);
     }
 
     /**
@@ -310,6 +356,8 @@ class ContentPostController extends Controller
                 'content_category' => $contentPost->content_category,
                 'tags' => $contentPost->tags,
                 'notes' => $contentPost->notes,
+                'meta_description' => $contentPost->meta_description,
+                'seo_keywords' => $contentPost->seo_keywords,
                 'engagement_metrics' => $contentPost->engagement_metrics,
                 'engagement_rate' => $contentPost->engagement_rate,
                 'total_engagement' => $contentPost->total_engagement,
@@ -336,8 +384,7 @@ class ContentPostController extends Controller
     {
         Gate::authorize('update', $contentPost);
 
-        $clients = User::where('role', 'client')
-            ->select('id', 'first_name', 'last_name', 'email')
+        $clients = Client::select('id', 'first_name', 'last_name', 'email')
             ->orderBy('first_name')
             ->orderBy('last_name')
             ->get()
@@ -368,6 +415,8 @@ class ContentPostController extends Controller
                 'content_category' => $contentPost->content_category,
                 'tags' => $contentPost->tags,
                 'notes' => $contentPost->notes,
+                'meta_description' => $contentPost->meta_description,
+                'seo_keywords' => $contentPost->seo_keywords,
                 'engagement_metrics' => $contentPost->engagement_metrics,
                 'engagement_rate' => $contentPost->engagement_rate,
                 'total_engagement' => $contentPost->total_engagement,
@@ -411,7 +460,7 @@ class ContentPostController extends Controller
             'raw_files' => $_FILES ?? 'No $_FILES',
             'image_file_info' => $request->hasFile('image') ? (
                 is_array($request->file('image')) ?
-                'Image is array: ' . json_encode(array_map(function($file) {
+                'Image is array: ' . json_encode(array_map(function ($file) {
                     return [
                         'original_name' => $file->getClientOriginalName(),
                         'mime_type' => $file->getMimeType(),
@@ -434,11 +483,21 @@ class ContentPostController extends Controller
             ) : 'No image file'
         ]);
 
+        // Handle platform JSON string conversion before validation
+        $requestData = $request->all();
+        if (isset($requestData['platform']) && is_string($requestData['platform'])) {
+            try {
+                $requestData['platform'] = json_decode($requestData['platform'], true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                // If JSON decoding fails, set to empty array
+                $requestData['platform'] = [];
+            }
+        }
+
         try {
             $validated = $request->validate([
-                'client_id' => 'sometimes|required|exists:users,id',
-                'platform' => 'sometimes|required|array',
-                'platform.*' => 'string|in:website,facebook,instagram,twitter,linkedin,tiktok,youtube,pinterest,email,other',
+                'client_id' => 'sometimes|required|exists:clients,id',
+                'platform' => 'sometimes|required|array', // Now expecting an array after JSON decode
                 'content_type' => 'sometimes|required|string|max:255',
                 'title' => 'sometimes|required|string|max:255',
                 'description' => 'nullable|string',
@@ -451,6 +510,8 @@ class ContentPostController extends Controller
                 'content_category' => 'nullable|string|max:255',
                 'tags' => 'nullable',
                 'notes' => 'nullable|string',
+                'meta_description' => 'nullable|string|max:255',
+                'seo_keywords' => 'nullable|string|max:255',
                 'engagement_metrics' => 'nullable|array',
                 'media' => 'nullable|array',
                 'media.*' => 'file|mimes:jpeg,png,jpg,gif,pdf,doc,docx,txt|max:10240', // 10MB max
@@ -465,11 +526,11 @@ class ContentPostController extends Controller
         }
 
         $oldStatus = $contentPost->status;
-        
+
         // Remove image from validated data since it's a file upload
         $image = $validated['image'] ?? null;
         unset($validated['image']);
-        
+
         // Handle tags JSON string conversion
         if (isset($validated['tags']) && is_string($validated['tags'])) {
             try {
@@ -479,7 +540,7 @@ class ContentPostController extends Controller
                 $validated['tags'] = array_filter(array_map('trim', explode(',', $validated['tags'])));
             }
         }
-        
+
         $contentPost->update($validated);
 
         // Process image upload if any
@@ -584,7 +645,6 @@ class ContentPostController extends Controller
 
             return redirect()->route('content.web.index')
                 ->with('success', 'Content post deleted successfully');
-
         } catch (\Exception $e) {
             \Log::error('ContentPost deletion failed', [
                 'error' => $e->getMessage(),
@@ -625,15 +685,15 @@ class ContentPostController extends Controller
         // Get all posts and manually count platforms
         $allPosts = $query->get();
         $platformStats = [];
-        
+
         $allPlatforms = ['website', 'facebook', 'instagram', 'twitter', 'linkedin', 'tiktok', 'youtube', 'pinterest', 'email', 'other'];
-        
+
         foreach ($allPlatforms as $platform) {
             $platformStats[$platform] = $allPosts->filter(function ($post) use ($platform) {
                 return in_array($platform, $post->platform ?? []);
             })->count();
         }
-        
+
         // Remove platforms with zero counts
         $platformStats = array_filter($platformStats);
 
@@ -667,7 +727,7 @@ class ContentPostController extends Controller
             try {
                 // Validate file using FileValidationService
                 $validationResult = $this->fileValidationService->validate($file, $this->determineFileType($file));
-                
+
                 if (!$validationResult['valid']) {
                     \Log::warning('Media file validation failed', [
                         'file' => $file->getClientOriginalName(),
@@ -737,7 +797,6 @@ class ContentPostController extends Controller
                         'file_size' => $file->getSize()
                     ]);
                 }
-
             } catch (\Exception $e) {
                 \Log::error('Media file processing failed', [
                     'error' => $e->getMessage(),
@@ -757,7 +816,7 @@ class ContentPostController extends Controller
     protected function determineFileType($file): string
     {
         $mimeType = $file->getMimeType();
-        
+
         if (str_starts_with($mimeType, 'image/')) {
             return 'image';
         } elseif (str_starts_with($mimeType, 'video/')) {
