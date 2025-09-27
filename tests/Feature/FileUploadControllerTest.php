@@ -43,6 +43,7 @@ class FileUploadControllerTest extends TestCase
                 'success',
                 'message',
                 'data' => [
+                    'id',
                     'file_name',
                     'file_path',
                     'mime_type',
@@ -90,6 +91,7 @@ class FileUploadControllerTest extends TestCase
                 'message',
                 'data' => [
                     '*' => [
+                        'id',
                         'file_name',
                         'file_path',
                         'mime_type',

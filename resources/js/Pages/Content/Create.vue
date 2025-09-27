@@ -515,11 +515,11 @@
                                 <BaseFileUploader
                                     v-model="form.image"
                                     label="Main Image"
-                                    :acceptTypes="['image']"
+                                    :accept-types="['image']"
                                     :multiple="false"
-                                    :maxSize="10"
+                                    :max-size="10"
                                     description="Drag & drop image here or click to browse"
-                                    :withPreview="true"
+                                    :with-preview="true"
                                     :required="false"
                                     :error="form.errors.image"
                                 />
@@ -538,16 +538,16 @@
                                 <BaseFileUploader
                                     v-model="form.media"
                                     label="Additional Files"
-                                    :acceptTypes="[
+                                    :accept-types="[
                                         'image',
                                         'pdf',
                                         'xlsx',
                                         'csv',
                                     ]"
                                     :multiple="true"
-                                    :maxSize="10"
+                                    :max-size="10"
                                     description="Drag & drop files here or click to browse"
-                                    :withPreview="false"
+                                    :with-preview="false"
                                     :required="false"
                                     :error="form.errors.media"
                                 />
@@ -833,6 +833,8 @@ const submitForm = () => {
                 formDataToProcess.media.forEach((fileData, index) => {
                     if (fileData?.file instanceof File) {
                         formData.append(`media[${index}]`, fileData.file);
+                    } else if (fileData instanceof File) {
+                        formData.append(`media[${index}]`, fileData);
                     }
                 });
             }
@@ -841,23 +843,47 @@ const submitForm = () => {
             // Handle single image file upload - extract File from FileData object
             if (
                 formDataToProcess.image &&
+                typeof formDataToProcess.image === "object" &&
                 formDataToProcess.image.file instanceof File
             ) {
+                // Case 1: FileData object with file property
                 formData.append(key, formDataToProcess.image.file);
                 console.log(
-                    "Appended image file:",
+                    "Appended image file from FileData object:",
                     formDataToProcess.image.file.name
                 );
             } else if (formDataToProcess.image instanceof File) {
+                // Case 2: Direct File object
                 formData.append(key, formDataToProcess.image);
                 console.log(
                     "Appended direct File object:",
                     formDataToProcess.image.name
                 );
-            } else {
+            } else if (
+                formDataToProcess.image &&
+                typeof formDataToProcess.image === "object" &&
+                formDataToProcess.image instanceof File
+            ) {
+                // Case 3: Object that is actually a File (edge case)
+                formData.append(key, formDataToProcess.image);
                 console.log(
+                    "Appended File object (wrapped case):",
+                    formDataToProcess.image.name
+                );
+            } else if (
+                formDataToProcess.image === null ||
+                formDataToProcess.image === undefined ||
+                formDataToProcess.image === ""
+            ) {
+                // Case 4: Null, undefined, or empty string - don't append anything
+                console.log("Image field is empty, skipping");
+            } else {
+                // Case 5: Invalid format - log error but don't append
+                console.error(
                     "Image field is not a valid File object or FileData:",
-                    formDataToProcess.image
+                    formDataToProcess.image,
+                    "Type:",
+                    typeof formDataToProcess.image
                 );
             }
         } else if (Array.isArray(formDataToProcess[key])) {

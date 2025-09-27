@@ -8,21 +8,25 @@ use App\Models\User;
 use App\Models\Client;
 use App\Services\ImageService;
 use App\Services\FileValidationService;
+use App\Services\FileUploadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ContentPostController extends Controller
 {
     protected ImageService $imageService;
     protected FileValidationService $fileValidationService;
+    protected FileUploadService $fileUploadService;
 
-    public function __construct(ImageService $imageService, FileValidationService $fileValidationService)
+    public function __construct(ImageService $imageService, FileValidationService $fileValidationService, FileUploadService $fileUploadService)
     {
         $this->imageService = $imageService;
         $this->fileValidationService = $fileValidationService;
+        $this->fileUploadService = $fileUploadService;
     }
 
     /**
@@ -144,7 +148,7 @@ class ContentPostController extends Controller
     {
         Gate::authorize('create', ContentPost::class);
 
-        \Log::info('ContentPost store method called', [
+        Log::info('ContentPost store method called', [
             'request_method' => $request->method(),
             'content_type' => $request->header('Content-Type'),
             'has_files' => $request->hasFile('image') || $request->hasFile('media'),
@@ -214,7 +218,7 @@ class ContentPostController extends Controller
                 'media.*' => 'file|mimes:jpeg,png,jpg,gif,pdf,doc,docx,txt|max:10240', // 10MB max
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('ContentPost validation failed', [
+            Log::error('ContentPost validation failed', [
                 'errors' => $e->errors(),
                 'request_data' => $request->all(),
                 'files_data' => $request->allFiles()
@@ -232,51 +236,34 @@ class ContentPostController extends Controller
 
         // Process image upload if any
         if ($request->hasFile('image')) {
-            $imageFile = $request->file('image');
-
-            // Handle case where image might be an array (from FileUpload component)
-            if (is_array($imageFile)) {
-                $imageFile = $imageFile[0]; // Take the first file
-                \Log::info('Image upload detected as array, using first file', [
-                    'file_name' => $imageFile->getClientOriginalName(),
-                    'file_size' => $imageFile->getSize(),
-                    'mime_type' => $imageFile->getMimeType()
-                ]);
-            } else {
-                \Log::info('Image upload detected as single file', [
-                    'file_name' => $imageFile->getClientOriginalName(),
-                    'file_size' => $imageFile->getSize(),
-                    'mime_type' => $imageFile->getMimeType()
-                ]);
-            }
-
             try {
-                $imageResult = $this->imageService->processImage(
-                    $imageFile,
-                    'content_images',
-                    [
-                        'max_width' => 1920,
-                        'max_height' => 1080,
-                        'quality' => 85,
-                        'create_thumbnail' => true,
-                        'thumbnail_size' => 300,
-                    ]
+                $uploadResult = $this->fileUploadService->handleFileUploadFromRequest(
+                    $request,
+                    'image',
+                    'image',
+                    10 // 10MB max size
                 );
 
-                $updateResult = $contentPost->update(['image' => $imageResult['path']]);
-                \Log::info('ContentPost image field updated with processed image', [
-                    'success' => $updateResult,
-                    'path' => $imageResult['path'],
-                    'original_dimensions' => $imageResult['width'] . 'x' . $imageResult['height']
-                ]);
-            } catch (\Exception $e) {
-                $fileName = is_array($request->file('image')) ?
-                    $request->file('image')[0]->getClientOriginalName() :
-                    $request->file('image')->getClientOriginalName();
+                if ($uploadResult['success']) {
+                    $updateResult = $contentPost->update(['image' => $uploadResult['data']['file_path']]);
+                    Log::info('ContentPost image field updated with processed image', [
+                        'success' => $updateResult,
+                        'path' => $uploadResult['data']['file_path'],
+                        'original_dimensions' => ($uploadResult['data']['width'] ?? 'unknown') . 'x' . ($uploadResult['data']['height'] ?? 'unknown')
+                    ]);
+                } else {
+                    Log::error('Image upload failed in store method', [
+                        'errors' => $uploadResult['errors']
+                    ]);
 
-                \Log::error('Image processing failed in store method', [
-                    'error' => $e->getMessage(),
-                    'file' => $fileName
+                    // Return user-friendly error message
+                    return back()->withErrors([
+                        'image' => 'Failed to upload image: ' . implode(', ', $uploadResult['errors'])
+                    ])->withInput();
+                }
+            } catch (\Exception $e) {
+                Log::error('Image processing failed in store method', [
+                    'error' => $e->getMessage()
                 ]);
 
                 // Return user-friendly error message
@@ -285,12 +272,63 @@ class ContentPostController extends Controller
                 ])->withInput();
             }
         } else {
-            \Log::info('No image file detected in store method request');
+            Log::info('No image file detected in store method request');
         }
 
         // Process media uploads if any
         if ($request->hasFile('media')) {
-            $this->processMediaUploads($request, $contentPost);
+            try {
+                $uploadResult = $this->fileUploadService->handleMultipleFileUploadFromRequest(
+                    $request,
+                    'media',
+                    'file', // Use generic file type to allow all supported types
+                    10 // 10MB max size
+                );
+
+                if ($uploadResult['success']) {
+                    $successfulFiles = $uploadResult['data']['successful_files'] ?? [];
+                    $failedFiles = $uploadResult['data']['failed_files'] ?? [];
+
+                    // Process successful files
+                    foreach ($successfulFiles as $fileData) {
+                        $this->fileUploadService->createMediaRecord(
+                            $fileData,
+                            $contentPost->id,
+                            Auth::id(),
+                            false, // Not primary
+                            count($successfulFiles) // Set order based on position
+                        );
+                    }
+
+                    // Log any failed files
+                    if (!empty($failedFiles)) {
+                        Log::warning('Some media files failed to upload', [
+                            'failed_files' => $failedFiles,
+                            'content_post_id' => $contentPost->id
+                        ]);
+                    }
+                } else {
+                    Log::error('Media upload failed', [
+                        'errors' => $uploadResult['errors'],
+                        'content_post_id' => $contentPost->id
+                    ]);
+
+                    // Return user-friendly error message
+                    return back()->withErrors([
+                        'media' => 'Failed to upload media files: ' . implode(', ', $uploadResult['errors'])
+                    ])->withInput();
+                }
+            } catch (\Exception $e) {
+                Log::error('Media processing failed', [
+                    'error' => $e->getMessage(),
+                    'content_post_id' => $contentPost->id
+                ]);
+
+                // Return user-friendly error message
+                return back()->withErrors([
+                    'media' => 'Failed to process media files: ' . $e->getMessage()
+                ])->withInput();
+            }
         }
 
         return Inertia::render('Content/Show', [
@@ -450,7 +488,7 @@ class ContentPostController extends Controller
     {
         Gate::authorize('update', $contentPost);
 
-        \Log::info('ContentPost update method called', [
+        Log::info('ContentPost update method called', [
             'content_post_id' => $contentPost->id,
             'request_method' => $request->method(),
             'content_type' => $request->header('Content-Type'),
@@ -517,7 +555,7 @@ class ContentPostController extends Controller
                 'media.*' => 'file|mimes:jpeg,png,jpg,gif,pdf,doc,docx,txt|max:10240', // 10MB max
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('ContentPost validation failed', [
+            Log::error('ContentPost validation failed', [
                 'errors' => $e->errors(),
                 'request_data' => $request->all(),
                 'files_data' => $request->allFiles()
@@ -545,10 +583,7 @@ class ContentPostController extends Controller
 
         // Process image upload if any
         if ($request->hasFile('image')) {
-            \Log::info('Image upload detected in update method', [
-                'file_name' => $request->file('image')->getClientOriginalName(),
-                'file_size' => $request->file('image')->getSize(),
-                'mime_type' => $request->file('image')->getMimeType(),
+            Log::info('Image upload detected in update method', [
                 'old_image' => $contentPost->image
             ]);
 
@@ -556,34 +591,39 @@ class ContentPostController extends Controller
                 // Delete old image if exists
                 if ($contentPost->image) {
                     $deleteResult = $this->imageService->deleteImage($contentPost->image);
-                    \Log::info('Old image deletion attempted', [
+                    Log::info('Old image deletion attempted', [
                         'path' => $contentPost->image,
                         'success' => $deleteResult
                     ]);
                 }
 
-                $imageResult = $this->imageService->processImage(
-                    $request->file('image'),
-                    'content_images',
-                    [
-                        'max_width' => 1920,
-                        'max_height' => 1080,
-                        'quality' => 85,
-                        'create_thumbnail' => true,
-                        'thumbnail_size' => 300,
-                    ]
+                $uploadResult = $this->fileUploadService->handleFileUploadFromRequest(
+                    $request,
+                    'image',
+                    'image',
+                    10 // 10MB max size
                 );
 
-                $updateResult = $contentPost->update(['image' => $imageResult['path']]);
-                \Log::info('ContentPost image field updated with processed image', [
-                    'success' => $updateResult,
-                    'path' => $imageResult['path'],
-                    'original_dimensions' => $imageResult['width'] . 'x' . $imageResult['height']
-                ]);
+                if ($uploadResult['success']) {
+                    $updateResult = $contentPost->update(['image' => $uploadResult['data']['file_path']]);
+                    Log::info('ContentPost image field updated with processed image', [
+                        'success' => $updateResult,
+                        'path' => $uploadResult['data']['file_path'],
+                        'original_dimensions' => ($uploadResult['data']['width'] ?? 'unknown') . 'x' . ($uploadResult['data']['height'] ?? 'unknown')
+                    ]);
+                } else {
+                    Log::error('Image upload failed in update method', [
+                        'errors' => $uploadResult['errors']
+                    ]);
+
+                    // Return user-friendly error message
+                    return back()->withErrors([
+                        'image' => 'Failed to upload image: ' . implode(', ', $uploadResult['errors'])
+                    ])->withInput();
+                }
             } catch (\Exception $e) {
-                \Log::error('Image processing failed in update method', [
-                    'error' => $e->getMessage(),
-                    'file' => $request->file('image')->getClientOriginalName()
+                Log::error('Image processing failed in update method', [
+                    'error' => $e->getMessage()
                 ]);
 
                 // Return user-friendly error message
@@ -592,12 +632,63 @@ class ContentPostController extends Controller
                 ])->withInput();
             }
         } else {
-            \Log::info('No image file detected in update method request');
+            Log::info('No image file detected in update method request');
         }
 
         // Process media uploads if any
         if ($request->hasFile('media')) {
-            $this->processMediaUploads($request, $contentPost);
+            try {
+                $uploadResult = $this->fileUploadService->handleMultipleFileUploadFromRequest(
+                    $request,
+                    'media',
+                    'file', // Use generic file type to allow all supported types
+                    10 // 10MB max size
+                );
+
+                if ($uploadResult['success']) {
+                    $successfulFiles = $uploadResult['data']['successful_files'] ?? [];
+                    $failedFiles = $uploadResult['data']['failed_files'] ?? [];
+
+                    // Process successful files
+                    foreach ($successfulFiles as $fileData) {
+                        $this->fileUploadService->createMediaRecord(
+                            $fileData,
+                            $contentPost->id,
+                            Auth::id(),
+                            false, // Not primary
+                            count($successfulFiles) // Set order based on position
+                        );
+                    }
+
+                    // Log any failed files
+                    if (!empty($failedFiles)) {
+                        Log::warning('Some media files failed to upload', [
+                            'failed_files' => $failedFiles,
+                            'content_post_id' => $contentPost->id
+                        ]);
+                    }
+                } else {
+                    Log::error('Media upload failed', [
+                        'errors' => $uploadResult['errors'],
+                        'content_post_id' => $contentPost->id
+                    ]);
+
+                    // Return user-friendly error message
+                    return back()->withErrors([
+                        'media' => 'Failed to upload media files: ' . implode(', ', $uploadResult['errors'])
+                    ])->withInput();
+                }
+            } catch (\Exception $e) {
+                Log::error('Media processing failed', [
+                    'error' => $e->getMessage(),
+                    'content_post_id' => $contentPost->id
+                ]);
+
+                // Return user-friendly error message
+                return back()->withErrors([
+                    'media' => 'Failed to process media files: ' . $e->getMessage()
+                ])->withInput();
+            }
         }
 
         // Send notification if status changed to published
@@ -626,14 +717,14 @@ class ContentPostController extends Controller
             // Clean up associated images
             if ($contentPost->image) {
                 $this->imageService->deleteImage($contentPost->image);
-                \Log::info('ContentPost image cleaned up during deletion', ['path' => $contentPost->image]);
+                Log::info('ContentPost image cleaned up during deletion', ['path' => $contentPost->image]);
             }
 
             // Clean up associated media files
             $mediaFiles = $contentPost->media->pluck('file_path')->toArray();
             if (!empty($mediaFiles)) {
                 $deleteResults = $this->imageService->deleteImages($mediaFiles);
-                \Log::info('ContentPost media files cleaned up during deletion', [
+                Log::info('ContentPost media files cleaned up during deletion', [
                     'files' => $mediaFiles,
                     'results' => $deleteResults
                 ]);
@@ -641,12 +732,12 @@ class ContentPostController extends Controller
 
             $contentPost->delete();
 
-            \Log::info('ContentPost deleted successfully', ['id' => $contentPost->id]);
+            Log::info('ContentPost deleted successfully', ['id' => $contentPost->id]);
 
             return redirect()->route('content.web.index')
                 ->with('success', 'Content post deleted successfully');
         } catch (\Exception $e) {
-            \Log::error('ContentPost deletion failed', [
+            Log::error('ContentPost deletion failed', [
                 'error' => $e->getMessage(),
                 'content_post_id' => $contentPost->id
             ]);
@@ -729,7 +820,7 @@ class ContentPostController extends Controller
                 $validationResult = $this->fileValidationService->validate($file, $this->determineFileType($file));
 
                 if (!$validationResult['valid']) {
-                    \Log::warning('Media file validation failed', [
+                    Log::warning('Media file validation failed', [
                         'file' => $file->getClientOriginalName(),
                         'errors' => $validationResult['errors'],
                         'content_post_id' => $contentPost->id
@@ -768,7 +859,7 @@ class ContentPostController extends Controller
                         'is_primary' => $order === 1, // First file is primary
                     ]);
 
-                    \Log::info('Media image processed and stored', [
+                    Log::info('Media image processed and stored', [
                         'content_post_id' => $contentPost->id,
                         'file_name' => $imageResult['filename'],
                         'dimensions' => $imageResult['width'] . 'x' . $imageResult['height']
@@ -791,14 +882,14 @@ class ContentPostController extends Controller
                         'is_primary' => $order === 1, // First file is primary
                     ]);
 
-                    \Log::info('Media file stored', [
+                    Log::info('Media file stored', [
                         'content_post_id' => $contentPost->id,
                         'file_name' => $fileName,
                         'file_size' => $file->getSize()
                     ]);
                 }
             } catch (\Exception $e) {
-                \Log::error('Media file processing failed', [
+                Log::error('Media file processing failed', [
                     'error' => $e->getMessage(),
                     'file' => $file->getClientOriginalName(),
                     'content_post_id' => $contentPost->id

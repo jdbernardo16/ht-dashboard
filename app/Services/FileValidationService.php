@@ -65,6 +65,7 @@ class FileValidationService
             'pdf' => ['mimes:pdf'],
             'xlsx' => ['mimes:xlsx,xls'],
             'csv' => ['mimes:csv'],
+            'file' => ['file'], // Generic file type that accepts all supported types
         ];
 
         $typeRules = $rules[$type] ?? ['file'];
@@ -95,7 +96,7 @@ class FileValidationService
 
     public function getMaxSizeForType(string $type): int
     {
-        return match($type) {
+        return match ($type) {
             'image' => 2048, // 2MB
             'video' => 5120, // 5MB
             'pdf' => 1024,   // 1MB
@@ -118,7 +119,7 @@ class FileValidationService
     public function validateMultiple(array $files, string $type, ?int $maxSize = null): array
     {
         $results = [];
-        
+
         foreach ($files as $index => $file) {
             if ($file instanceof UploadedFile) {
                 $results[$index] = $this->validate($file, $type, $maxSize);

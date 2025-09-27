@@ -28,7 +28,7 @@ class FileUploadController extends Controller
     public function upload(Request $request)
     {
         // Validate request parameters first
-        $request->validate([
+        $validated = $request->validate([
             'file' => 'required|file',
             'type' => 'required|string|in:image,video,pdf,xlsx,csv',
             'max_size' => 'sometimes|integer|min:1',
@@ -54,10 +54,13 @@ class FileUploadController extends Controller
             // Process and store the file
             $fileData = $this->processFile($file, $type);
 
+            // Generate a unique ID for the file
+            $fileId = uniqid('file_');
+
             return response()->json([
                 'success' => true,
                 'message' => 'File uploaded successfully',
-                'data' => $fileData
+                'data' => array_merge(['id' => $fileId], $fileData)
             ]);
         } catch (\Exception $e) {
             $fileName = $request->file('file')?->getClientOriginalName() ?? 'unknown';
@@ -82,7 +85,7 @@ class FileUploadController extends Controller
     public function uploadMultiple(Request $request)
     {
         try {
-            $request->validate([
+            $validated = $request->validate([
                 'files' => 'required|array',
                 'files.*' => 'file',
                 'type' => 'required|string|in:image,video,pdf,xlsx,csv',
@@ -123,7 +126,9 @@ class FileUploadController extends Controller
             $uploadedFiles = [];
             foreach ($validFiles as $index => $file) {
                 $fileData = $this->processFile($file, $type);
-                $uploadedFiles[] = $fileData;
+                // Generate a unique ID for each file
+                $fileId = uniqid('file_');
+                $uploadedFiles[] = array_merge(['id' => $fileId], $fileData);
             }
 
             return response()->json([

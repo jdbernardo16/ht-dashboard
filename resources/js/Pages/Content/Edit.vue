@@ -537,11 +537,11 @@
                                 <BaseFileUploader
                                     v-model="form.image"
                                     label="Main Image"
-                                    :acceptTypes="['image']"
+                                    :accept-types="['image']"
                                     :multiple="false"
-                                    :maxSize="10"
+                                    :max-size="10"
                                     description="Drag & drop image here or click to browse"
-                                    :withPreview="true"
+                                    :with-preview="true"
                                     :required="false"
                                     :error="form.errors.image"
                                 />
@@ -616,16 +616,16 @@
                                 <BaseFileUploader
                                     v-model="form.media"
                                     label="Additional Files"
-                                    :acceptTypes="[
+                                    :accept-types="[
                                         'image',
                                         'pdf',
                                         'xlsx',
                                         'csv',
                                     ]"
                                     :multiple="true"
-                                    :maxSize="10"
+                                    :max-size="10"
                                     description="Drag & drop files here or click to browse"
-                                    :withPreview="false"
+                                    :with-preview="false"
                                     :required="false"
                                     :error="form.errors.media"
                                 />
