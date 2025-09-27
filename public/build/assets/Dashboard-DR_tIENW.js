@@ -1,0 +1,1 @@
+import e from"./Dashboard-Dp87g5_a.js";import{c as r,o as t,a,u as o,h as s,F as n}from"./app-DMsrlBw0.js";import"./AuthenticatedLayout-CoyhxnNm.js";import"./_plugin-vue_export-helper-DlAUqK2U.js";const f={__name:"Dashboard",setup(c){return(m,p)=>(t(),r(n,null,[a(o(s),{title:"Manager Dashboard"}),a(e)],64))}};export{f as default};
