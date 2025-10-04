@@ -21,6 +21,7 @@ class ClientSeeder extends Seeder
                 'phone' => '+1-555-0101',
                 'address' => '123 Main St, Anytown, USA',
                 'company' => 'Doe Enterprises',
+                'category' => 'Regular',
             ],
             [
                 'first_name' => 'Jane',
@@ -29,6 +30,7 @@ class ClientSeeder extends Seeder
                 'phone' => '+1-555-0102',
                 'address' => '456 Oak Ave, Somewhere, USA',
                 'company' => 'Smith & Co',
+                'category' => 'VIP',
             ],
             [
                 'first_name' => 'Michael',
@@ -37,6 +39,7 @@ class ClientSeeder extends Seeder
                 'phone' => '+1-555-0103',
                 'address' => '789 Pine Rd, Nowhere, USA',
                 'company' => 'Johnson Industries',
+                'category' => 'Wholesale',
             ],
             [
                 'first_name' => 'Sarah',
@@ -45,6 +48,7 @@ class ClientSeeder extends Seeder
                 'phone' => '+1-555-0104',
                 'address' => '321 Elm St, Anycity, USA',
                 'company' => 'Williams Group',
+                'category' => 'Regular',
             ],
             [
                 'first_name' => 'David',
@@ -53,6 +57,7 @@ class ClientSeeder extends Seeder
                 'phone' => '+1-555-0105',
                 'address' => '654 Maple Dr, Somecity, USA',
                 'company' => 'Brown Corporation',
+                'category' => 'Collector',
             ],
         ];
 

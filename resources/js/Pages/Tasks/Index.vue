@@ -1,15 +1,199 @@
 <template>
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Task Management
-            </h2>
+            <div
+                class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4"
+            >
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 leading-tight">
+                        Task Management
+                    </h1>
+                    <p class="mt-1 text-sm text-gray-500">
+                        Manage and track all your tasks in one place
+                    </p>
+                </div>
+
+                <!-- Action buttons -->
+                <div
+                    class="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-2 sm:space-y-0 mt-4 lg:mt-0"
+                >
+                    <button
+                        @click="createTask"
+                        class="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 shadow-sm"
+                    >
+                        <svg
+                            class="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 4v16m8-8H4"
+                            ></path>
+                        </svg>
+                        New Task
+                    </button>
+                </div>
+            </div>
         </template>
 
-        <div>
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <!-- Search and Filter Bar -->
-                <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Task Statistics Cards -->
+            <div
+                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+            >
+                <div
+                    class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100"
+                >
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div
+                                class="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full"
+                            >
+                                <svg
+                                    class="w-6 h-6 text-blue-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                                    ></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-blue-600">
+                                Total Tasks
+                            </p>
+                            <p class="text-2xl font-bold text-gray-900">
+                                {{ tasks.length }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100"
+                >
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div
+                                class="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full"
+                            >
+                                <svg
+                                    class="w-6 h-6 text-green-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    ></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-green-600">
+                                Completed
+                            </p>
+                            <p class="text-2xl font-bold text-gray-900">
+                                {{ getCompletedTasksCount() }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-100"
+                >
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div
+                                class="inline-flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-full"
+                            >
+                                <svg
+                                    class="w-6 h-6 text-yellow-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    ></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-yellow-600">
+                                In Progress
+                            </p>
+                            <p class="text-2xl font-bold text-gray-900">
+                                {{ getInProgressTasksCount() }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl p-6 border border-red-100"
+                >
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div
+                                class="inline-flex items-center justify-center w-12 h-12 bg-red-100 rounded-full"
+                            >
+                                <svg
+                                    class="w-6 h-6 text-red-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                                    ></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-red-600">
+                                Overdue
+                            </p>
+                            <p class="text-2xl font-bold text-gray-900">
+                                {{ getOverdueTasksCount() }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filter Card -->
+            <div
+                class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8"
+            >
+                <div
+                    class="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4"
+                >
+                    <h2 class="text-xl font-semibold text-white">
+                        Search & Filter
+                    </h2>
+                </div>
+                <div class="p-6">
                     <div
                         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
                     >
@@ -36,7 +220,7 @@
                                             stroke-linejoin="round"
                                             stroke-width="2"
                                             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                        />
+                                        ></path>
                                     </svg>
                                 </div>
                                 <input
@@ -44,7 +228,7 @@
                                     v-model="filters.search"
                                     type="text"
                                     placeholder="Search tasks..."
-                                    class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                    class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors duration-200"
                                     @input="handleSearchInput"
                                     aria-describedby="search-description"
                                 />
@@ -68,7 +252,7 @@
                             <select
                                 id="status"
                                 v-model="filters.status"
-                                class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                                 @change="handleFilterChange"
                             >
                                 <option value="">All Status</option>
@@ -93,7 +277,7 @@
                             <select
                                 id="priority"
                                 v-model="filters.priority"
-                                class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                                 @change="handleFilterChange"
                             >
                                 <option value="">All Priorities</option>
@@ -112,7 +296,7 @@
                     <div class="mt-4">
                         <button
                             @click="showAdvancedFilters = !showAdvancedFilters"
-                            class="text-sm text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            class="text-sm text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200"
                             :aria-expanded="showAdvancedFilters"
                         >
                             {{ showAdvancedFilters ? "Hide" : "Show" }} advanced
@@ -136,7 +320,7 @@
                             <select
                                 id="assigned_to"
                                 v-model="filters.assigned_to"
-                                class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                                 @change="handleFilterChange"
                             >
                                 <option value="">All Users</option>
@@ -162,7 +346,7 @@
                                 id="date_from"
                                 v-model="filters.date_from"
                                 type="date"
-                                class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                                 @change="handleFilterChange"
                             />
                         </div>
@@ -178,7 +362,7 @@
                                 id="date_to"
                                 v-model="filters.date_to"
                                 type="date"
-                                class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                class="block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200"
                                 @change="handleFilterChange"
                             />
                         </div>
@@ -191,207 +375,211 @@
                         <button
                             @click="clearFilters"
                             :disabled="!hasActiveFilters"
-                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                             aria-label="Clear all filters"
                         >
                             Clear Filters
                         </button>
                         <button
                             @click="applyFilters"
-                            class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-sm"
                             aria-label="Apply filters"
                         >
                             Apply Filters
                         </button>
                     </div>
                 </div>
+            </div>
 
-                <!-- Loading State -->
-                <div
-                    v-if="loading && tasks.length === 0"
-                    class="bg-white rounded-lg shadow-sm p-6"
-                >
-                    <div class="animate-pulse space-y-4">
-                        <div class="h-4 bg-gray-200 rounded w-1/4"></div>
-                        <div class="space-y-3">
-                            <div
-                                v-for="i in 5"
-                                :key="i"
-                                class="h-12 bg-gray-200 rounded"
-                            ></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Empty State -->
-                <div
-                    v-else-if="tasks.length === 0 && !hasActiveFilters"
-                    class="bg-white rounded-lg shadow-sm p-12 text-center"
-                >
-                    <svg
-                        class="mx-auto h-12 w-12 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                        />
-                    </svg>
-                    <h3 class="mt-2 text-sm font-medium text-gray-900">
-                        No tasks yet
-                    </h3>
-                    <p class="mt-1 text-sm text-gray-500">
-                        Get started by creating your first task.
-                    </p>
-                    <div class="mt-6">
-                        <button
-                            @click="createTask"
-                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                            aria-label="Create new task"
-                        >
-                            <svg
-                                class="-ml-1 mr-2 h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M12 4v16m8-8H4"
-                                />
-                            </svg>
-                            New Task
-                        </button>
-                    </div>
-                </div>
-
-                <!-- No Results State -->
-                <div
-                    v-else-if="tasks.length === 0 && hasActiveFilters"
-                    class="bg-white rounded-lg shadow-sm p-12 text-center"
-                >
-                    <svg
-                        class="mx-auto h-12 w-12 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        />
-                    </svg>
-                    <h3 class="mt-2 text-sm font-medium text-gray-900">
-                        No tasks found
-                    </h3>
-                    <p class="mt-1 text-sm text-gray-500">
-                        Try adjusting your search criteria or clear filters.
-                    </p>
-                    <div class="mt-6">
-                        <button
-                            @click="clearFilters"
-                            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                            aria-label="Clear filters"
-                        >
-                            Clear Filters
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Data Table -->
-                <div
-                    v-else
-                    class="bg-white shadow-sm rounded-lg overflow-hidden"
-                >
-                    <div class="relative">
-                        <!-- Loading Overlay -->
+            <!-- Loading State -->
+            <div
+                v-if="loading && tasks.length === 0"
+                class="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+            >
+                <div class="animate-pulse space-y-4">
+                    <div class="h-4 bg-gray-200 rounded w-1/4"></div>
+                    <div class="space-y-3">
                         <div
-                            v-if="loading"
-                            class="absolute inset-0 bg-white bg-opacity-50 z-10 flex items-center justify-center"
+                            v-for="i in 5"
+                            :key="i"
+                            class="h-12 bg-gray-200 rounded"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div
+                v-else-if="tasks.length === 0 && !hasActiveFilters"
+                class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center"
+            >
+                <svg
+                    class="mx-auto h-16 w-16 text-gray-400 mb-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    ></path>
+                </svg>
+                <h3 class="mt-2 text-lg font-medium text-gray-900">
+                    No tasks yet
+                </h3>
+                <p class="mt-1 text-sm text-gray-500">
+                    Get started by creating your first task.
+                </p>
+                <div class="mt-6">
+                    <button
+                        @click="createTask"
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
+                        aria-label="Create new task"
+                    >
+                        <svg
+                            class="-ml-1 mr-2 h-5 w-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                         >
-                            <div
-                                class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"
-                            ></div>
-                        </div>
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 4v16m8-8H4"
+                            ></path>
+                        </svg>
+                        New Task
+                    </button>
+                </div>
+            </div>
 
-                        <DataTable
-                            :data="tasks"
-                            :columns="columns"
-                            :filters="tableFilters"
-                            @create="createTask"
-                            @view="viewTask"
-                            @edit="editTask"
-                            @delete="deleteTask"
-                            aria-label="Tasks list"
-                        >
-                            <template #title="{ item }">
-                                <div class="font-medium text-gray-900">
-                                    {{ item.title }}
-                                </div>
-                            </template>
+            <!-- No Results State -->
+            <div
+                v-else-if="tasks.length === 0 && hasActiveFilters"
+                class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center"
+            >
+                <svg
+                    class="mx-auto h-16 w-16 text-gray-400 mb-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    ></path>
+                </svg>
+                <h3 class="mt-2 text-lg font-medium text-gray-900">
+                    No tasks found
+                </h3>
+                <p class="mt-1 text-sm text-gray-500">
+                    Try adjusting your search criteria or clear filters.
+                </p>
+                <div class="mt-6">
+                    <button
+                        @click="clearFilters"
+                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
+                        aria-label="Clear filters"
+                    >
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
 
-                            <template #priority="{ item }">
-                                <span
-                                    :class="getPriorityClass(item.priority)"
-                                    class="px-2 py-1 text-xs font-medium rounded-full"
-                                >
-                                    {{ formatPriority(item.priority) }}
-                                </span>
-                            </template>
-
-                            <template #status="{ item }">
-                                <span
-                                    :class="getStatusClass(item.status)"
-                                    class="px-2 py-1 text-xs font-medium rounded-full"
-                                >
-                                    {{ formatStatus(item.status) }}
-                                </span>
-                            </template>
-
-                            <template #due_date="{ item }">
-                                <span
-                                    :class="
-                                        getDueDateClass(
-                                            item.due_date,
-                                            item.status
-                                        )
-                                    "
-                                    class="text-sm font-medium"
-                                >
-                                    {{ formatDate(item.due_date) }}
-                                </span>
-                            </template>
-
-                            <template #assigned_to="{ item }">
-                                {{
-                                    item.assigned_to?.full_name ||
-                                    item.assigned_to?.name ||
-                                    "Unassigned"
-                                }}
-                            </template>
-
-                            <template #estimated_hours="{ item }">
-                                {{ item.estimated_hours || "-" }} hrs
-                            </template>
-                        </DataTable>
+            <!-- Data Table Card -->
+            <div
+                v-else
+                class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+            >
+                <div
+                    class="bg-gradient-to-r from-gray-700 to-gray-900 px-6 py-4"
+                >
+                    <h2 class="text-xl font-semibold text-white">Tasks List</h2>
+                </div>
+                <div class="relative">
+                    <!-- Loading Overlay -->
+                    <div
+                        v-if="loading"
+                        class="absolute inset-0 bg-white bg-opacity-50 z-10 flex items-center justify-center"
+                    >
+                        <div
+                            class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"
+                        ></div>
                     </div>
 
-                    <!-- Pagination -->
+                    <DataTable
+                        :data="tasks"
+                        :columns="columns"
+                        :filters="tableFilters"
+                        @create="createTask"
+                        @view="viewTask"
+                        @edit="editTask"
+                        @delete="deleteTask"
+                        aria-label="Tasks list"
+                    >
+                        <template #title="{ item }">
+                            <div class="font-medium text-gray-900">
+                                {{ item.title }}
+                            </div>
+                        </template>
+
+                        <template #priority="{ item }">
+                            <span
+                                :class="getPriorityClass(item.priority)"
+                                class="px-2 py-1 text-xs font-medium rounded-full"
+                            >
+                                {{ formatPriority(item.priority) }}
+                            </span>
+                        </template>
+
+                        <template #status="{ item }">
+                            <span
+                                :class="getStatusClass(item.status)"
+                                class="px-2 py-1 text-xs font-medium rounded-full"
+                            >
+                                {{ formatStatus(item.status) }}
+                            </span>
+                        </template>
+
+                        <template #due_date="{ item }">
+                            <span
+                                :class="
+                                    getDueDateClass(item.due_date, item.status)
+                                "
+                                class="text-sm font-medium"
+                            >
+                                {{ formatDate(item.due_date) }}
+                            </span>
+                        </template>
+
+                        <template #assigned_to="{ item }">
+                            {{
+                                item.assigned_to?.full_name ||
+                                item.assigned_to?.name ||
+                                "Unassigned"
+                            }}
+                        </template>
+
+                        <template #estimated_hours="{ item }">
+                            {{ item.estimated_hours || "-" }} hrs
+                        </template>
+                    </DataTable>
+                </div>
+
+                <!-- Pagination -->
+                <div class="border-t border-gray-200">
                     <Pagination
                         :links="props.tasks.links"
                         :from="props.tasks.from"
                         :to="props.tasks.to"
                         :total="props.tasks.total"
                         @navigate="handlePageChange"
-                        class="border-t border-gray-200"
+                        class="bg-gray-50 px-6 py-3"
                     />
                 </div>
             </div>
@@ -492,6 +680,20 @@ const tableFilters = [
     { value: "cancelled", label: "Cancelled" },
 ];
 
+// Computed properties
+const tasks = computed(() => props.tasks.data || []);
+const hasActiveFilters = computed(() => {
+    return Object.values(filters.value).some((value) => value !== "");
+});
+
+// User options for filter
+const userOptions = computed(() => {
+    return props.users.map((user) => ({
+        value: user.id,
+        label: user.name || user.full_name,
+    }));
+});
+
 // Form fields
 const formFields = [
     { name: "title", label: "Title", type: "text", required: true },
@@ -500,6 +702,14 @@ const formFields = [
         label: "Description",
         type: "textarea",
         required: false,
+        rows: 4,
+    },
+    {
+        name: "status",
+        label: "Status",
+        type: "select",
+        required: true,
+        options: statusOptions,
     },
     {
         name: "priority",
@@ -509,21 +719,18 @@ const formFields = [
         options: priorityOptions,
     },
     {
-        name: "status",
-        label: "Status",
-        type: "select",
-        required: true,
-        options: statusOptions,
-    },
-    { name: "due_date", label: "Due Date", type: "date", required: true },
-    {
         name: "assigned_to",
         label: "Assigned To",
         type: "select",
         required: false,
-        options: [],
+        options: userOptions,
     },
-    { name: "category", label: "Category", type: "text", required: false },
+    {
+        name: "due_date",
+        label: "Due Date",
+        type: "date",
+        required: false,
+    },
     {
         name: "estimated_hours",
         label: "Estimated Hours",
@@ -533,72 +740,15 @@ const formFields = [
         step: 0.5,
     },
     {
-        name: "actual_hours",
-        label: "Actual Hours",
-        type: "number",
+        name: "notes",
+        label: "Notes",
+        type: "textarea",
         required: false,
-        min: 0,
-        step: 0.5,
+        rows: 3,
     },
 ];
 
-// Computed properties
-const tasks = computed(() => props.tasks.data || []);
-const hasActiveFilters = computed(() =>
-    Object.values(filters.value).some((value) => value && value !== "")
-);
-
-const userOptions = computed(() =>
-    props.users.map((user) => ({
-        value: user.id,
-        label: user.full_name || user.name,
-    }))
-);
-
-const goalOptions = computed(() =>
-    props.goals.map((goal) => ({
-        value: goal.id,
-        label: goal.title,
-    }))
-);
-
-// Update form fields dynamically
-const updateFormFields = () => {
-    const assignedToField = formFields.find((f) => f.name === "assigned_to");
-    if (assignedToField) {
-        assignedToField.options = userOptions.value;
-    }
-
-    const goalField = formFields.find((f) => f.name === "related_goal_id");
-    if (goalField) {
-        goalField.options = goalOptions.value;
-    }
-};
-
 // Methods
-const fetchTasks = async () => {
-    loading.value = true;
-    try {
-        const params = {};
-        Object.keys(filters.value).forEach((key) => {
-            if (filters.value[key]) params[key] = filters.value[key];
-        });
-
-        router.get("/tasks", params, {
-            preserveState: true,
-            preserveScroll: true,
-            only: ["tasks", "filters"],
-            onError: (errors) => {
-                console.error("Error fetching tasks:", errors);
-            },
-        });
-    } catch (error) {
-        console.error("Error fetching tasks:", error);
-    } finally {
-        loading.value = false;
-    }
-};
-
 const createTask = () => {
     router.visit("/tasks/create");
 };
@@ -614,61 +764,61 @@ const viewTask = (task) => {
 const deleteTask = async (task) => {
     if (confirm("Are you sure you want to delete this task?")) {
         try {
-            await router.delete(`/tasks/${task.id}`);
-            await fetchTasks();
+            loading.value = true;
+            await router.delete(`/tasks/${task.id}`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    // The page will automatically refresh with new data
+                },
+                onError: (errors) => {
+                    console.error("Error deleting task:", errors);
+                    if (errors.message?.includes("403")) {
+                        alert("You don't have permission to delete this task.");
+                    }
+                },
+                onFinish: () => {
+                    loading.value = false;
+                },
+            });
         } catch (error) {
+            loading.value = false;
             console.error("Error deleting task:", error);
         }
     }
 };
 
-const handleSubmit = async (formData) => {
-    loading.value = true;
-    try {
-        // Handle tags conversion
-        if (formData.tags) {
-            formData.tags = formData.tags
-                .split(",")
-                .map((tag) => tag.trim())
-                .filter((tag) => tag);
-        }
-
-        // Convert checkbox values to proper boolean type
-        if (formData.is_recurring !== undefined) {
-            formData.is_recurring = Boolean(formData.is_recurring);
-        }
-
-        if (isEdit.value) {
-            await router.put(`/tasks/${form.value.id}`, formData);
-        } else {
-            await router.post("/tasks", formData);
-        }
-        await fetchTasks();
-        closeModal();
-    } catch (error) {
-        if (error.response?.status === 422) {
-            const validationErrors = error.response.data.errors;
-            if (formModal.value) {
-                formModal.value.setErrors(validationErrors);
-            }
-        } else {
-            console.error("Error saving task:", error);
-        }
-    } finally {
-        loading.value = false;
-    }
+const handleSearchInput = () => {
+    clearTimeout(window.searchTimeout);
+    window.searchTimeout = setTimeout(() => {
+        applyFilters();
+    }, 300);
 };
 
-const closeModal = () => {
-    showModal.value = false;
-    form.value = {};
-    if (formModal.value) {
-        formModal.value.resetForm();
-    }
+const handleFilterChange = () => {
+    applyFilters();
 };
 
 const applyFilters = () => {
-    fetchTasks();
+    loading.value = true;
+    const params = {};
+    Object.keys(filters.value).forEach((key) => {
+        if (filters.value[key]) params[key] = filters.value[key];
+    });
+
+    router.get("/tasks", params, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ["tasks", "filters"],
+        onError: (errors) => {
+            console.error("Error applying filters:", errors);
+            if (errors.message?.includes("403")) {
+                alert("You don't have permission to view tasks.");
+            }
+        },
+        onFinish: () => {
+            loading.value = false;
+        },
+    });
 };
 
 const clearFilters = () => {
@@ -680,7 +830,7 @@ const clearFilters = () => {
         date_from: "",
         date_to: "",
     };
-    fetchTasks();
+    applyFilters();
 };
 
 const handlePageChange = (url) => {
@@ -691,40 +841,60 @@ const handlePageChange = (url) => {
     });
 };
 
-// Search input handler with debouncing
-let searchTimeout = null;
-const handleSearchInput = () => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        fetchTasks();
-    }, 300);
+const closeModal = () => {
+    showModal.value = false;
+    form.value = {};
+    if (formModal.value) {
+        formModal.value.resetForm();
+    }
 };
 
-// Filter change handler
-const handleFilterChange = () => {
-    fetchTasks();
+const handleSubmit = (formData) => {
+    loading.value = true;
+    // Handle form submission logic here
+    // This would typically involve an API call or form submission
+};
+
+// Statistics methods
+const getCompletedTasksCount = () => {
+    return tasks.value.filter((task) => task.status === "completed").length;
+};
+
+const getInProgressTasksCount = () => {
+    return tasks.value.filter((task) => task.status === "in_progress").length;
+};
+
+const getOverdueTasksCount = () => {
+    const today = new Date();
+    return tasks.value.filter((task) => {
+        return (
+            task.due_date &&
+            new Date(task.due_date) < today &&
+            task.status !== "completed"
+        );
+    }).length;
 };
 
 // Utility functions
-const formatCurrency = (value) => {
-    return parseFloat(value).toFixed(2);
-};
-
 const formatDate = (date) => {
+    if (!date) return "N/A";
     return new Date(date).toLocaleDateString();
 };
 
 const formatStatus = (status) => {
+    if (!status) return "Unknown";
     return status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ");
 };
 
 const formatPriority = (priority) => {
+    if (!priority) return "Unknown";
     return priority.charAt(0).toUpperCase() + priority.slice(1);
 };
 
 const getStatusClass = (status) => {
     const classes = {
         pending: "bg-yellow-100 text-yellow-800",
+        not_started: "bg-gray-100 text-gray-800",
         in_progress: "bg-blue-100 text-blue-800",
         completed: "bg-green-100 text-green-800",
         cancelled: "bg-red-100 text-red-800",
@@ -743,19 +913,32 @@ const getPriorityClass = (priority) => {
 };
 
 const getDueDateClass = (dueDate, status) => {
-    if (status === "completed" || status === "cancelled") return "";
+    if (!dueDate || status === "completed") return "text-gray-900";
+
     const today = new Date();
     const due = new Date(dueDate);
-    if (due < today) return "text-red-600 font-medium";
-    return "";
+    const diffTime = due - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return "text-red-600 font-medium";
+    if (diffDays <= 3) return "text-yellow-600 font-medium";
+    return "text-gray-900";
 };
+
+// Watch for filter changes
+watch(
+    filters,
+    () => {
+        clearTimeout(window.filterTimeout);
+        window.filterTimeout = setTimeout(() => {
+            applyFilters();
+        }, 300);
+    },
+    { deep: true }
+);
 
 // Lifecycle
 onMounted(() => {
-    updateFormFields();
+    // Initialize any required data
 });
-
-// Watch for changes in props
-watch(() => props.users, updateFormFields, { immediate: true });
-watch(() => props.goals, updateFormFields, { immediate: true });
 </script>

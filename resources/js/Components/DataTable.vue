@@ -192,7 +192,7 @@
             <!-- Scroll Navigation Buttons -->
             <div
                 v-if="showScrollButtons"
-                class="flex justify-center gap-2 mt-4"
+                class="flex justify-center gap-2 my-4"
             >
                 <button
                     @click="scrollLeft"
