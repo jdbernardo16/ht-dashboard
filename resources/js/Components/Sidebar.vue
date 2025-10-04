@@ -254,15 +254,6 @@ const getIconColorClass = (color, isActive) => {
                     class="flex items-center space-x-4 group"
                     @click="closeSidebar"
                 >
-                    <div class="relative">
-                        <div
-                            class="absolute inset-0 bg-white rounded-lg opacity-20 group-hover:opacity-30 transition-opacity duration-200"
-                        ></div>
-                        <ApplicationLogo
-                            v-show="isClient"
-                            class="relative h-10 w-auto"
-                        />
-                    </div>
                     <div v-if="isOpen" class="space-y-1">
                         <h1 class="text-xl font-bold text-white leading-tight">
                             Hidden Treasures

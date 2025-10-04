@@ -287,9 +287,7 @@ onUnmounted(() => {
                     <div
                         class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
                     >
-                        <div class="p-6 sm:p-8">
-                            <slot />
-                        </div>
+                        <slot />
                     </div>
                 </div>
             </main>

@@ -46,7 +46,7 @@
                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
             >
                 <div
-                    class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100"
+                    class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-100"
                 >
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
@@ -80,7 +80,7 @@
                 </div>
 
                 <div
-                    class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100"
+                    class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-3 border border-green-100"
                 >
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
@@ -114,7 +114,7 @@
                 </div>
 
                 <div
-                    class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-100"
+                    class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-3 border border-yellow-100"
                 >
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
@@ -148,7 +148,7 @@
                 </div>
 
                 <div
-                    class="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl p-6 border border-red-100"
+                    class="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl p-3 border border-red-100"
                 >
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
