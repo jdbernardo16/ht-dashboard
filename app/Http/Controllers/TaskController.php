@@ -64,8 +64,11 @@ class TaskController extends Controller
         // Get users for dropdowns
         $users = \App\Models\User::select('id', 'first_name', 'last_name')->orderBy('first_name')->get();
 
-        // Get goals for dropdowns
-        $goals = \App\Models\Goal::select('id', 'title')->orderBy('title')->get();
+        // Get goals for dropdowns - ensure unique titles
+        $goals = \App\Models\Goal::selectRaw('MIN(id) as id, title')
+            ->groupBy('title')
+            ->orderBy('title')
+            ->get();
 
         return Inertia::render('Tasks/Index', [
             'tasks' => $tasks,
@@ -84,7 +87,7 @@ class TaskController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
+            'description' => 'required|string',
             'priority' => 'required|in:low,medium,high,urgent',
             'status' => 'required|in:pending,in_progress,completed,cancelled,not_started',
             'due_date' => 'required|date',
@@ -101,6 +104,14 @@ class TaskController extends Controller
             'media' => 'nullable|array',
             'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,txt|max:10240', // 10MB max
         ]);
+
+        // Additional validation for category to enforce predefined values for new tasks
+        if ($request->has('category') && $request->category) {
+            $predefinedCategories = ['Inventory Management', 'Client Communication', 'Sales Processing', 'Content Creation', 'Expense Tracking', 'Goal Planning', 'System Maintenance', 'Other'];
+            if (!in_array($request->category, $predefinedCategories)) {
+                return redirect()->back()->withErrors(['category' => 'Please select a valid category from the dropdown.'])->withInput();
+            }
+        }
 
         $validated['user_id'] = Auth::id();
 
@@ -155,8 +166,9 @@ class TaskController extends Controller
                 ];
             });
 
-        // Get goals for dropdowns
-        $goals = \App\Models\Goal::select('id', 'title')
+        // Get goals for dropdowns - ensure unique titles
+        $goals = \App\Models\Goal::selectRaw('MIN(id) as id, title')
+            ->groupBy('title')
             ->orderBy('title')
             ->get();
 
@@ -204,8 +216,9 @@ class TaskController extends Controller
                 ];
             });
 
-        // Get goals for dropdowns
-        $goals = \App\Models\Goal::select('id', 'title')
+        // Get goals for dropdowns - ensure unique titles
+        $goals = \App\Models\Goal::selectRaw('MIN(id) as id, title')
+            ->groupBy('title')
             ->orderBy('title')
             ->get();
 
@@ -228,7 +241,7 @@ class TaskController extends Controller
 
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
+            'description' => 'sometimes|required|string',
             'priority' => 'sometimes|required|in:low,medium,high,urgent',
             'status' => 'sometimes|required|in:pending,in_progress,completed,cancelled,not_started',
             'due_date' => 'sometimes|required|date',
@@ -245,6 +258,14 @@ class TaskController extends Controller
             'media' => 'nullable|array',
             'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,txt|max:10240', // 10MB max
         ]);
+
+        // Additional validation for category to enforce predefined values for updates
+        if ($request->has('category') && $request->category) {
+            $predefinedCategories = ['Inventory Management', 'Client Communication', 'Sales Processing', 'Content Creation', 'Expense Tracking', 'Goal Planning', 'System Maintenance', 'Other'];
+            if (!in_array($request->category, $predefinedCategories)) {
+                return redirect()->back()->withErrors(['category' => 'Please select a valid category from the dropdown.'])->withInput();
+            }
+        }
 
         \Log::debug('Validated data:', $validated);
 

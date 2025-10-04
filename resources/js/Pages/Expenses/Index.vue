@@ -58,6 +58,53 @@
                     <template #category="{ item }">
                         {{ item.category }}
                     </template>
+
+                    <template #receipts="{ item }">
+                        <div class="flex items-center space-x-1">
+                            <div
+                                v-for="media in item.media.slice(0, 3)"
+                                :key="media.id"
+                                class="relative"
+                            >
+                                <img
+                                    v-if="media.mime_type.startsWith('image/')"
+                                    :src="media.url"
+                                    :alt="media.original_name"
+                                    class="h-8 w-8 object-cover rounded border"
+                                />
+                                <div
+                                    v-else
+                                    class="h-8 w-8 bg-blue-100 rounded border flex items-center justify-center"
+                                >
+                                    <svg
+                                        class="w-4 h-4 text-blue-600"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                        />
+                                    </svg>
+                                </div>
+                            </div>
+                            <span
+                                v-if="item.media.length > 3"
+                                class="text-xs text-gray-500"
+                            >
+                                +{{ item.media.length - 3 }}
+                            </span>
+                            <span
+                                v-else-if="item.media.length === 0"
+                                class="text-xs text-gray-400"
+                            >
+                                None
+                            </span>
+                        </div>
+                    </template>
                 </DataTable>
 
                 <!-- Pagination -->
@@ -137,6 +184,7 @@ const columns = [
     { key: "expense_date", label: "Date", type: "date", sortable: true },
     { key: "status", label: "Status", sortable: true },
     { key: "merchant", label: "Merchant", sortable: true },
+    { key: "receipts", label: "Receipts", sortable: false },
 ];
 
 // Status options

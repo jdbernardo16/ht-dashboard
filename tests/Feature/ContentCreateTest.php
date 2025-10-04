@@ -63,7 +63,7 @@ class ContentCreateTest extends TestCase
 
         // Verify the image path is saved
         $this->assertNotNull($contentPost->image);
-        $this->assertStringContainsString('content_images', $contentPost->image);
+        $this->assertStringContainsString('uploads', $contentPost->image);
 
         // Verify the file exists in storage
         $this->assertTrue(Storage::disk('public')->exists($contentPost->image));

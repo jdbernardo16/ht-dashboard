@@ -46,6 +46,13 @@ class ContentPost extends Model
     ];
 
     /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['image_url'];
+
+    /**
      * Boot the model
      */
     protected static function boot()
@@ -209,5 +216,17 @@ class ContentPost extends Model
         $shares = $this->engagement_metrics['shares'] ?? 0;
 
         return $likes + $comments + $shares;
+    }
+
+    /**
+     * Get the full URL for the image
+     */
+    public function getImageUrlAttribute()
+    {
+        if (!$this->image) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->image);
     }
 }

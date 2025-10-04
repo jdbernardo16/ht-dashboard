@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Sale;
 use App\Models\User;
+use App\Models\Client;
 use Illuminate\Database\Seeder;
 use Carbon\Carbon;
 
@@ -15,7 +16,7 @@ class SalesSeeder extends Seeder
     public function run(): void
     {
         $users = User::whereIn('role', ['admin', 'manager', 'va'])->get();
-        $clients = User::where('role', 'client')->get();
+        $clients = Client::all();
 
         $productServices = [
             'Digital Marketing Package',

@@ -30,6 +30,13 @@ class ContentPostMedia extends Model
     ];
 
     /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = ['url'];
+
+    /**
      * Boot the model
      */
     protected static function boot()
@@ -76,7 +83,11 @@ class ContentPostMedia extends Model
      */
     public function getUrlAttribute()
     {
-        return asset('storage/' . $this->file_path);
+        if (!$this->file_path) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->file_path);
     }
 
     /**

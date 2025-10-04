@@ -3,23 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\ContentPostMedia;
-use App\Services\FileValidationService;
-use App\Services\ImageService;
+use App\Services\FileStorageService;
+use App\Rules\ValidFileType;
+use App\Rules\ValidImageDimensions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class FileUploadController extends Controller
 {
-    protected $fileValidationService;
-    protected $imageService;
+    protected $fileStorageService;
 
-    public function __construct(FileValidationService $fileValidationService, ImageService $imageService)
+    public function __construct(FileStorageService $fileStorageService)
     {
-        $this->fileValidationService = $fileValidationService;
-        $this->imageService = $imageService;
+        $this->fileStorageService = $fileStorageService;
     }
 
     /**
@@ -35,23 +35,14 @@ class FileUploadController extends Controller
         ]);
 
         try {
-
             $file = $request->file('file');
             $type = $request->input('type');
             $maxSize = $request->input('max_size');
 
-            // Validate the file
-            $validationResult = $this->fileValidationService->validate($file, $type, $maxSize);
+            // Validate file type and size
+            $this->validateFile($file, $type, $maxSize);
 
-            if (!$validationResult['valid']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'File validation failed',
-                    'errors' => $validationResult['errors']
-                ], 422);
-            }
-
-            // Process and store the file
+            // Process and store the file using FileStorageService
             $fileData = $this->processFile($file, $type);
 
             // Generate a unique ID for the file
@@ -62,6 +53,12 @@ class FileUploadController extends Controller
                 'message' => 'File uploaded successfully',
                 'data' => array_merge(['id' => $fileId], $fileData)
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File validation failed',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             $fileName = $request->file('file')?->getClientOriginalName() ?? 'unknown';
 
@@ -76,6 +73,85 @@ class FileUploadController extends Controller
                 'message' => 'File upload failed',
                 'errors' => ['An error occurred during file upload']
             ], 500);
+        }
+    }
+
+    /**
+     * Validate file based on type and constraints
+     */
+    protected function validateFile($file, string $type, ?int $maxSize = null): void
+    {
+        $maxFileSize = $maxSize ?: config('validation.file_upload.max_size', 10 * 1024 * 1024);
+        
+        if ($type === 'image') {
+            $allowedTypes = config('validation.file_upload.allowed_images', ['jpeg', 'png', 'jpg', 'gif', 'webp']);
+            $maxDimensions = config('validation.file_upload.max_image_dimensions', [4000, 4000]);
+            $minDimensions = config('validation.file_upload.min_image_dimensions', [100, 100]);
+            
+            // Check file size
+            if ($file->getSize() > $maxFileSize) {
+                throw new \Illuminate\Validation\ValidationException(
+                    validator()->make([], []),
+                    ['The file may not be greater than ' . round($maxFileSize / 1024 / 1024, 2) . 'MB.']
+                );
+            }
+            
+            // Check MIME type
+            $allowedMimes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
+            if (!in_array($file->getMimeType(), $allowedMimes)) {
+                throw new \Illuminate\Validation\ValidationException(
+                    validator()->make([], []),
+                    ['The file must be a file of type: ' . implode(', ', $allowedTypes) . '.']
+                );
+            }
+            
+            // Check image dimensions
+            $imageInfo = @getimagesize($file->getPathname());
+            if (!$imageInfo) {
+                throw new \Illuminate\Validation\ValidationException(
+                    validator()->make([], []),
+                    ['The file must be a valid image.']
+                );
+            }
+            
+            [$width, $height] = $imageInfo;
+            if ($width < $minDimensions[0] || $height < $minDimensions[1]) {
+                throw new \Illuminate\Validation\ValidationException(
+                    validator()->make([], []),
+                    ["The image dimensions are too small. Minimum size is {$minDimensions[0]}x{$minDimensions[1]} pixels."]
+                );
+            }
+            
+            if ($width > $maxDimensions[0] || $height > $maxDimensions[1]) {
+                throw new \Illuminate\Validation\ValidationException(
+                    validator()->make([], []),
+                    ["The image dimensions are too large. Maximum size is {$maxDimensions[0]}x{$maxDimensions[1]} pixels."]
+                );
+            }
+        } else {
+            $allowedTypes = config('validation.file_upload.allowed_documents', ['pdf', 'xlsx', 'csv']);
+            $allowedMimes = [
+                'application/pdf',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel',
+                'text/csv'
+            ];
+            
+            // Check file size
+            if ($file->getSize() > $maxFileSize) {
+                throw new \Illuminate\Validation\ValidationException(
+                    validator()->make([], []),
+                    ['The file may not be greater than ' . round($maxFileSize / 1024 / 1024, 2) . 'MB.']
+                );
+            }
+            
+            // Check MIME type
+            if (!in_array($file->getMimeType(), $allowedMimes)) {
+                throw new \Illuminate\Validation\ValidationException(
+                    validator()->make([], []),
+                    ['The file must be a file of type: ' . implode(', ', $allowedMimes) . '.']
+                );
+            }
         }
     }
 
@@ -96,46 +172,54 @@ class FileUploadController extends Controller
             $type = $request->input('type');
             $maxSize = $request->input('max_size');
 
-            // Validate all files
-            $validationResults = $this->fileValidationService->validateMultiple($files, $type, $maxSize);
-
+            $uploadedFiles = [];
             $failedFiles = [];
-            $validFiles = [];
 
-            foreach ($validationResults as $index => $result) {
-                if (!$result['valid']) {
-                    $failedFiles[$index] = [
-                        'file' => $files[$index]->getClientOriginalName(),
-                        'errors' => $result['errors']
+            foreach ($files as $index => $file) {
+                try {
+                    // Validate each file
+                    $this->validateFile($file, $type, $maxSize);
+                    
+                    // Process and store the file
+                    $fileData = $this->processFile($file, $type);
+                    $fileId = uniqid('file_');
+                    $uploadedFiles[] = array_merge(['id' => $fileId], $fileData);
+                    
+                } catch (\Illuminate\Validation\ValidationException $e) {
+                    $failedFiles[] = [
+                        'index' => $index,
+                        'file' => $file->getClientOriginalName(),
+                        'error' => 'Validation failed: ' . implode(', ', collect($e->errors())->flatten()->toArray())
                     ];
-                } else {
-                    $validFiles[$index] = $files[$index];
+                } catch (\Exception $e) {
+                    $failedFiles[] = [
+                        'index' => $index,
+                        'file' => $file->getClientOriginalName(),
+                        'error' => $e->getMessage()
+                    ];
                 }
             }
 
-            if (!empty($failedFiles)) {
+            if (!empty($failedFiles) && empty($uploadedFiles)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Some files failed validation',
-                    'failed_files' => $failedFiles,
-                    'valid_files' => []
+                    'message' => 'All files failed validation',
+                    'failed_files' => $failedFiles
                 ], 422);
-            }
-
-            // Process all valid files
-            $uploadedFiles = [];
-            foreach ($validFiles as $index => $file) {
-                $fileData = $this->processFile($file, $type);
-                // Generate a unique ID for each file
-                $fileId = uniqid('file_');
-                $uploadedFiles[] = array_merge(['id' => $fileId], $fileData);
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Files uploaded successfully',
-                'data' => $uploadedFiles
+                'message' => 'Files processed successfully',
+                'data' => $uploadedFiles,
+                'failed_files' => $failedFiles
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Request validation failed',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             Log::error('Multiple file upload failed', [
                 'error' => $e->getMessage(),
@@ -155,57 +239,47 @@ class FileUploadController extends Controller
      */
     protected function processFile($file, string $type)
     {
-        $mimeType = $file->getMimeType();
-        $isImage = str_starts_with($mimeType, 'image/');
-
-        if ($isImage) {
-            // Process image with ImageService
-            $imageResult = $this->imageService->processImage(
-                $file,
-                'uploads',
-                [
-                    'max_width' => 1920,
-                    'max_height' => 1080,
-                    'quality' => 85,
-                    'create_thumbnail' => true,
-                    'thumbnail_size' => 300,
-                ]
-            );
-
-            $fileData = [
-                'file_name' => $imageResult['filename'],
-                'file_path' => $imageResult['path'],
-                'mime_type' => $imageResult['mime_type'],
-                'file_size' => $imageResult['size'],
-                'original_name' => $imageResult['original_name'],
-                'url' => asset('storage/' . $imageResult['path']),
-                'thumbnail_url' => $imageResult['thumbnail_path'] ? asset('storage/' . $imageResult['thumbnail_path']) : null,
-                'width' => $imageResult['width'] ?? null,
-                'height' => $imageResult['height'] ?? null,
-            ];
-        } else {
-            // Handle non-image files
-            $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('uploads', $fileName, 'public');
-
-            $fileData = [
-                'file_name' => $fileName,
-                'file_path' => $filePath,
-                'mime_type' => $file->getMimeType(),
-                'file_size' => $file->getSize(),
+        try {
+            if ($type === 'image') {
+                // Use FileStorageService for images
+                $result = $this->fileStorageService->storeImage($file);
+                
+                return [
+                    'file_name' => $result['filename'],
+                    'file_path' => $result['path'],
+                    'mime_type' => $result['mime_type'],
+                    'file_size' => $result['file_size'],
+                    'original_name' => $result['original_name'],
+                    'url' => $result['url'],
+                    'thumbnail_url' => null, // Will be populated if thumbnail is created
+                    'width' => null, // Will be populated if image dimensions are available
+                    'height' => null,
+                ];
+            } else {
+                // Use FileStorageService for media files
+                $result = $this->fileStorageService->storeMediaFile($file);
+                
+                return [
+                    'file_name' => $result['filename'],
+                    'file_path' => $result['path'],
+                    'mime_type' => $result['mime_type'],
+                    'file_size' => $result['file_size'],
+                    'original_name' => $result['original_name'],
+                    'url' => $result['url'],
+                    'thumbnail_url' => null,
+                    'width' => null,
+                    'height' => null,
+                ];
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to process file', [
                 'original_name' => $file->getClientOriginalName(),
-                'url' => asset('storage/' . $filePath),
-                'thumbnail_url' => null,
-                'width' => null,
-                'height' => null,
-            ];
+                'type' => $type,
+                'error' => $e->getMessage()
+            ]);
+            
+            throw new \Exception("Failed to process file: {$e->getMessage()}");
         }
-
-        // Note: We no longer create ContentPostMedia records here since they require a content_post_id
-        // Files uploaded through this controller are temporary and should be associated with content posts
-        // through the ContentPostController's processMediaUploads method
-
-        return $fileData;
     }
 
     /**
@@ -273,16 +347,31 @@ class FileUploadController extends Controller
      */
     public function config()
     {
+        $maxFileSize = config('validation.file_upload.max_size', 10 * 1024 * 1024);
+        $allowedImages = config('validation.file_upload.allowed_images', ['jpeg', 'png', 'jpg', 'gif', 'webp']);
+        $allowedDocuments = config('validation.file_upload.allowed_documents', ['pdf', 'xlsx', 'csv']);
+        $maxDimensions = config('validation.file_upload.max_image_dimensions', [4000, 4000]);
+        $minDimensions = config('validation.file_upload.min_image_dimensions', [100, 100]);
+        
         $config = [
-            'max_sizes' => [],
-            'allowed_types' => $this->fileValidationService->getAllowedTypes(),
-            'mime_types' => []
+            'max_size' => $maxFileSize,
+            'max_size_mb' => round($maxFileSize / 1024 / 1024, 2),
+            'allowed_images' => $allowedImages,
+            'allowed_documents' => $allowedDocuments,
+            'max_image_dimensions' => $maxDimensions,
+            'min_image_dimensions' => $minDimensions,
+            'mime_types' => [
+                'image' => [
+                    'image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'
+                ],
+                'document' => [
+                    'application/pdf',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'application/vnd.ms-excel',
+                    'text/csv'
+                ]
+            ]
         ];
-
-        foreach ($config['allowed_types'] as $type) {
-            $config['max_sizes'][$type] = $this->fileValidationService->getMaxSizeForType($type);
-            $config['mime_types'][$type] = $this->fileValidationService->getMimeTypesForType($type);
-        }
 
         return response()->json([
             'success' => true,

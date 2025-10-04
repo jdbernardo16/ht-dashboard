@@ -44,13 +44,14 @@
                                 <div class="mt-4">
                                     <InputLabel
                                         for="description"
-                                        value="Description"
+                                        value="Description *"
                                     />
                                     <textarea
                                         id="description"
                                         v-model="form.description"
                                         class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                         rows="4"
+                                        required
                                         :class="{
                                             'border-red-500':
                                                 form.errors.description,
@@ -178,16 +179,45 @@
                                             for="category"
                                             value="Category"
                                         />
-                                        <TextInput
+                                        <select
                                             id="category"
                                             v-model="form.category"
-                                            type="text"
-                                            class="mt-1 block w-full"
+                                            class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                             :class="{
                                                 'border-red-500':
                                                     form.errors.category,
                                             }"
-                                        />
+                                        >
+                                            <option value="">
+                                                Select Category
+                                            </option>
+                                            <option
+                                                value="Inventory Management"
+                                            >
+                                                Inventory Management
+                                            </option>
+                                            <option
+                                                value="Client Communication"
+                                            >
+                                                Client Communication
+                                            </option>
+                                            <option value="Sales Processing">
+                                                Sales Processing
+                                            </option>
+                                            <option value="Content Creation">
+                                                Content Creation
+                                            </option>
+                                            <option value="Expense Tracking">
+                                                Expense Tracking
+                                            </option>
+                                            <option value="Goal Planning">
+                                                Goal Planning
+                                            </option>
+                                            <option value="System Maintenance">
+                                                System Maintenance
+                                            </option>
+                                            <option value="Other">Other</option>
+                                        </select>
                                         <InputError
                                             :message="form.errors.category"
                                             class="mt-2"

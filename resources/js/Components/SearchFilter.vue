@@ -171,6 +171,24 @@
                 </select>
             </div>
 
+            <!-- Company Filter -->
+            <div v-if="filters.includes('company')">
+                <label
+                    for="company"
+                    class="block text-sm font-medium text-gray-700 mb-1"
+                >
+                    Company
+                </label>
+                <input
+                    type="text"
+                    id="company"
+                    :value="modelValue.company"
+                    @input="updateFilter('company', $event.target.value)"
+                    placeholder="Filter by company..."
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+            </div>
+
             <!-- Amount Range -->
             <div v-if="filters.includes('amount')">
                 <label
@@ -268,6 +286,7 @@ const props = defineProps({
             priority: "",
             type: "",
             category: "",
+            company: "",
             min_amount: "",
             max_amount: "",
             assigned_to: "",
