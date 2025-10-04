@@ -1,1 +1,0 @@
-import e from"./Dashboard-C5VKYb0Q.js";import{c as r,o as t,a,u as o,h as s,F as c}from"./app-BT7s3W82.js";import"./AuthenticatedLayout-DXmFaX_l.js";import"./_plugin-vue_export-helper-DlAUqK2U.js";const f={__name:"Dashboard",setup(m){return(n,p)=>(t(),r(c,null,[a(o(s),{title:"VA Dashboard"}),a(e)],64))}};export{f as default};
