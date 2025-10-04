@@ -1,276 +1,351 @@
 <template>
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex justify-between items-center">
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    Expense Details
-                </h2>
-                <div class="flex space-x-2">
+            <div
+                class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4"
+            >
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 leading-tight">
+                        {{ props.expense.description }}
+                    </h1>
+                    <p class="mt-1 text-sm text-gray-500">
+                        Expense ID: #{{ props.expense.id }} •
+                        {{ formatDate(props.expense.expense_date) }}
+                    </p>
+                </div>
+
+                <!-- Action buttons -->
+                <div
+                    class="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-2 sm:space-y-0 mt-4 lg:mt-0"
+                >
                     <button
                         @click="editExpense"
-                        class="inline-flex items-center px-4 py-2 bg-yellow-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-yellow-700 focus:bg-yellow-700 active:bg-yellow-900 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition ease-in-out duration-150"
+                        class="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 shadow-sm"
                     >
-                        Edit
+                        <svg
+                            class="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                        </svg>
+                        Edit Expense
                     </button>
                     <button
                         @click="deleteExpense"
-                        class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 focus:bg-red-700 active:bg-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150"
+                        class="inline-flex items-center justify-center px-4 py-2 bg-red-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200 shadow-sm"
                     >
+                        <svg
+                            class="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                        </svg>
                         Delete
                     </button>
                     <button
                         @click="goBack"
-                        class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150"
+                        class="inline-flex items-center justify-center px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200"
                     >
+                        <svg
+                            class="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                            />
+                        </svg>
                         Back
                     </button>
                 </div>
             </div>
         </template>
 
-        <div>
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6 text-gray-900">
-                        <!-- Expense Information -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <h3
-                                    class="text-lg font-medium text-gray-900 mb-4"
-                                >
-                                    Expense Information
-                                </h3>
-                                <dl class="space-y-4">
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Category
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{ props.expense.category }}
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Description
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{ props.expense.description }}
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Amount
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            <span
-                                                class="font-medium text-red-600"
-                                            >
-                                                ${{
-                                                    formatCurrency(
-                                                        props.expense.amount
-                                                    )
-                                                }}
-                                            </span>
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Expense Date
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                formatDate(
-                                                    props.expense.expense_date
-                                                )
-                                            }}
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Status
-                                        </dt>
-                                        <dd class="mt-1">
-                                            <span
-                                                :class="
-                                                    getStatusClass(
-                                                        props.expense.status
-                                                    )
-                                                "
-                                                class="px-2 py-1 text-xs font-medium rounded-full"
-                                            >
-                                                {{
-                                                    formatStatus(
-                                                        props.expense.status
-                                                    )
-                                                }}
-                                            </span>
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Payment Method
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                formatPaymentMethod(
-                                                    props.expense.payment_method
-                                                )
-                                            }}
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Merchant
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                props.expense.merchant || "N/A"
-                                            }}
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Receipt Number
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                props.expense.receipt_number ||
-                                                "N/A"
-                                            }}
-                                        </dd>
-                                    </div>
-                                </dl>
-                            </div>
-
-                            <div>
-                                <h3
-                                    class="text-lg font-medium text-gray-900 mb-4"
-                                >
-                                    Additional Details
-                                </h3>
-                                <dl class="space-y-4">
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Tax Amount
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            ${{
-                                                formatCurrency(
-                                                    props.expense.tax_amount ||
-                                                        0
-                                                )
-                                            }}
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Notes
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                props.expense.notes ||
-                                                "No notes provided"
-                                            }}
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Created By
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                props.expense.user?.name ||
-                                                "System"
-                                            }}
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Created At
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                formatDateTime(
-                                                    props.expense.created_at
-                                                )
-                                            }}
-                                        </dd>
-                                    </div>
-
-                                    <div>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500"
-                                        >
-                                            Last Updated
-                                        </dt>
-                                        <dd class="mt-1 text-sm text-gray-900">
-                                            {{
-                                                formatDateTime(
-                                                    props.expense.updated_at
-                                                )
-                                            }}
-                                        </dd>
-                                    </div>
-                                </dl>
-                            </div>
-                        </div>
-
-                        <!-- Receipts Section -->
-                        <div
-                            v-if="
-                                props.expense.media &&
-                                props.expense.media.length > 0
-                            "
-                            class="mt-8"
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Expense Value and Status Card -->
+            <div
+                class="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-8 mb-8 border border-red-100"
+            >
+                <div class="flex flex-wrap items-center justify-between gap-6">
+                    <div>
+                        <p class="text-sm font-medium text-red-600 mb-1">
+                            Expense Amount
+                        </p>
+                        <p class="text-4xl font-bold text-red-900">
+                            ${{ formatCurrency(props.expense.amount) }}
+                        </p>
+                        <p class="text-sm text-red-600 mt-2">
+                            {{ daysSinceExpense }}
+                            {{ daysSinceExpense === 1 ? "day" : "days" }} ago
+                        </p>
+                    </div>
+                    <div class="flex flex-col items-center space-y-4">
+                        <span
+                            :class="getStatusClass(props.expense.status)"
+                            class="inline-flex items-center px-6 py-3 rounded-full text-lg font-medium"
                         >
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                            <svg
+                                class="w-5 h-5 mr-2"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                            {{ formatStatus(props.expense.status) }}
+                        </span>
+                        <div class="text-center">
+                            <p class="text-sm text-gray-600">Payment Method</p>
+                            <p class="font-medium text-gray-900">
+                                {{
+                                    formatPaymentMethod(
+                                        props.expense.payment_method
+                                    )
+                                }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Main Content Area -->
+                <div class="lg:col-span-2 space-y-8">
+                    <!-- Expense Information Card -->
+                    <div
+                        class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                    >
+                        <div
+                            class="bg-gradient-to-r from-red-500 to-orange-600 px-6 py-4"
+                        >
+                            <h2 class="text-xl font-semibold text-white">
+                                Expense Information
+                            </h2>
+                        </div>
+                        <div class="p-6">
+                            <dl class="space-y-6">
+                                <div>
+                                    <dt
+                                        class="text-sm font-medium text-gray-500 mb-2"
+                                    >
+                                        Description
+                                    </dt>
+                                    <dd
+                                        class="text-xl font-semibold text-gray-900"
+                                    >
+                                        {{ props.expense.description }}
+                                    </dd>
+                                </div>
+
+                                <div>
+                                    <dt
+                                        class="text-sm font-medium text-gray-500 mb-2"
+                                    >
+                                        Category
+                                    </dt>
+                                    <dd class="text-lg text-gray-900">
+                                        <span
+                                            class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800"
+                                        >
+                                            {{ props.expense.category }}
+                                        </span>
+                                    </dd>
+                                </div>
+
+                                <div>
+                                    <dt
+                                        class="text-sm font-medium text-gray-500 mb-2"
+                                    >
+                                        Amount
+                                    </dt>
+                                    <dd class="text-3xl font-bold text-red-600">
+                                        ${{
+                                            formatCurrency(props.expense.amount)
+                                        }}
+                                    </dd>
+                                </div>
+
+                                <div v-if="props.expense.notes">
+                                    <dt
+                                        class="text-sm font-medium text-gray-500 mb-2"
+                                    >
+                                        Notes
+                                    </dt>
+                                    <dd
+                                        class="text-gray-900 leading-relaxed bg-gray-50 p-4 rounded-lg"
+                                    >
+                                        {{ props.expense.notes }}
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <!-- Additional Details Card -->
+                    <div
+                        class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                    >
+                        <div
+                            class="bg-gradient-to-r from-gray-700 to-gray-900 px-6 py-4"
+                        >
+                            <h2 class="text-xl font-semibold text-white">
+                                Additional Details
+                            </h2>
+                        </div>
+                        <div class="p-6">
+                            <dl class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <dt
+                                        class="text-sm font-medium text-gray-500 mb-2"
+                                    >
+                                        Tax Amount
+                                    </dt>
+                                    <dd
+                                        class="text-lg font-semibold text-gray-900"
+                                    >
+                                        ${{
+                                            formatCurrency(
+                                                props.expense.tax_amount || 0
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+
+                                <div>
+                                    <dt
+                                        class="text-sm font-medium text-gray-500 mb-2"
+                                    >
+                                        Merchant
+                                    </dt>
+                                    <dd class="text-lg text-gray-900">
+                                        {{ props.expense.merchant || "N/A" }}
+                                    </dd>
+                                </div>
+
+                                <div>
+                                    <dt
+                                        class="text-sm font-medium text-gray-500 mb-2"
+                                    >
+                                        Receipt Number
+                                    </dt>
+                                    <dd class="text-lg text-gray-900">
+                                        {{
+                                            props.expense.receipt_number ||
+                                            "N/A"
+                                        }}
+                                    </dd>
+                                </div>
+
+                                <div>
+                                    <dt
+                                        class="text-sm font-medium text-gray-500 mb-2"
+                                    >
+                                        Expense Date
+                                    </dt>
+                                    <dd class="text-lg text-gray-900">
+                                        {{
+                                            formatDate(
+                                                props.expense.expense_date
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+
+                                <div>
+                                    <dt
+                                        class="text-sm font-medium text-gray-500 mb-2"
+                                    >
+                                        Created By
+                                    </dt>
+                                    <dd class="text-lg text-gray-900">
+                                        {{
+                                            props.expense.user?.name || "System"
+                                        }}
+                                    </dd>
+                                </div>
+
+                                <div>
+                                    <dt
+                                        class="text-sm font-medium text-gray-500 mb-2"
+                                    >
+                                        Created At
+                                    </dt>
+                                    <dd class="text-lg text-gray-900">
+                                        {{
+                                            formatDateTime(
+                                                props.expense.created_at
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+
+                                <div>
+                                    <dt
+                                        class="text-sm font-medium text-gray-500 mb-2"
+                                    >
+                                        Last Updated
+                                    </dt>
+                                    <dd class="text-lg text-gray-900">
+                                        {{
+                                            formatDateTime(
+                                                props.expense.updated_at
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <!-- Receipts Section -->
+                    <div
+                        v-if="
+                            props.expense.media &&
+                            props.expense.media.length > 0
+                        "
+                        class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                    >
+                        <div
+                            class="bg-gradient-to-r from-yellow-500 to-orange-600 px-6 py-4"
+                        >
+                            <h2 class="text-xl font-semibold text-white">
                                 Receipts
-                            </h3>
+                            </h2>
+                        </div>
+                        <div class="p-6">
                             <div
-                                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                             >
                                 <div
                                     v-for="media in props.expense.media"
                                     :key="media.id"
-                                    class="border rounded-lg overflow-hidden bg-white shadow-sm"
+                                    class="bg-gray-50 rounded-xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200"
                                 >
                                     <div class="p-4">
                                         <div
-                                            class="flex items-center space-x-3 mb-3"
+                                            class="flex items-center space-x-3 mb-4"
                                         >
                                             <div class="flex-shrink-0">
                                                 <img
@@ -281,11 +356,11 @@
                                                     "
                                                     :src="media.url"
                                                     :alt="media.original_name"
-                                                    class="h-16 w-16 object-cover rounded"
+                                                    class="h-16 w-16 object-cover rounded-lg"
                                                 />
                                                 <div
                                                     v-else
-                                                    class="h-16 w-16 bg-blue-100 rounded flex items-center justify-center"
+                                                    class="h-16 w-16 bg-blue-100 rounded-lg flex items-center justify-center"
                                                 >
                                                     <svg
                                                         class="w-8 h-8 text-blue-600"
@@ -324,8 +399,21 @@
                                             <a
                                                 :href="media.url"
                                                 target="_blank"
-                                                class="flex-1 text-center px-3 py-2 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                class="flex-1 text-center px-3 py-2 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
                                             >
+                                                <svg
+                                                    class="w-4 h-4 inline mr-1"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                                    />
+                                                </svg>
                                                 View
                                             </a>
                                         </div>
@@ -333,65 +421,159 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Statistics Card -->
-                        <div class="mt-8 bg-gray-50 rounded-lg p-6">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                <!-- Sidebar -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- Expense Statistics Card -->
+                    <div
+                        class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                    >
+                        <div
+                            class="bg-gradient-to-r from-green-500 to-teal-600 px-6 py-4"
+                        >
+                            <h3 class="text-lg font-semibold text-white">
                                 Expense Statistics
                             </h3>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div class="bg-white rounded-lg p-4 shadow">
-                                    <dt
-                                        class="text-sm font-medium text-gray-500"
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-6">
+                                <div
+                                    class="text-center p-4 bg-red-50 rounded-lg border border-red-200"
+                                >
+                                    <p
+                                        class="text-sm font-medium text-red-600 mb-1"
                                     >
-                                        Expense Value
-                                    </dt>
-                                    <dd
-                                        class="mt-1 text-2xl font-semibold text-gray-900"
-                                    >
+                                        Total Expense
+                                    </p>
+                                    <p class="text-3xl font-bold text-red-900">
                                         ${{
                                             formatCurrency(props.expense.amount)
                                         }}
-                                    </dd>
+                                    </p>
                                 </div>
 
-                                <div class="bg-white rounded-lg p-4 shadow">
-                                    <dt
-                                        class="text-sm font-medium text-gray-500"
+                                <div
+                                    class="text-center p-4 bg-blue-50 rounded-lg border border-blue-200"
+                                >
+                                    <p
+                                        class="text-sm font-medium text-blue-600 mb-1"
                                     >
                                         Days Since Expense
-                                    </dt>
-                                    <dd
-                                        class="mt-1 text-2xl font-semibold text-gray-900"
-                                    >
+                                    </p>
+                                    <p class="text-2xl font-bold text-blue-900">
                                         {{ daysSinceExpense }}
-                                    </dd>
+                                    </p>
                                 </div>
 
-                                <div class="bg-white rounded-lg p-4 shadow">
-                                    <dt
-                                        class="text-sm font-medium text-gray-500"
+                                <div
+                                    class="text-center p-4 bg-purple-50 rounded-lg border border-purple-200"
+                                >
+                                    <p
+                                        class="text-sm font-medium text-purple-600 mb-1"
                                     >
                                         Payment Status
-                                    </dt>
-                                    <dd class="mt-1">
-                                        <span
-                                            :class="
-                                                getStatusClass(
-                                                    props.expense.status
-                                                )
-                                            "
-                                            class="px-2 py-1 text-xs font-medium rounded-full"
-                                        >
-                                            {{
-                                                formatStatus(
-                                                    props.expense.status
-                                                )
-                                            }}
-                                        </span>
-                                    </dd>
+                                    </p>
+                                    <span
+                                        :class="
+                                            getStatusClass(props.expense.status)
+                                        "
+                                        class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                                    >
+                                        {{ formatStatus(props.expense.status) }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    v-if="props.expense.tax_amount"
+                                    class="text-center p-4 bg-green-50 rounded-lg border border-green-200"
+                                >
+                                    <p
+                                        class="text-sm font-medium text-green-600 mb-1"
+                                    >
+                                        Tax Amount
+                                    </p>
+                                    <p
+                                        class="text-2xl font-bold text-green-900"
+                                    >
+                                        ${{
+                                            formatCurrency(
+                                                props.expense.tax_amount
+                                            )
+                                        }}
+                                    </p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions Card -->
+                    <div
+                        class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+                    >
+                        <div
+                            class="bg-gradient-to-r from-yellow-500 to-orange-600 px-6 py-4"
+                        >
+                            <h3 class="text-lg font-semibold text-white">
+                                Quick Actions
+                            </h3>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <button
+                                class="w-full flex items-center justify-center px-4 py-2 bg-indigo-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200"
+                            >
+                                <svg
+                                    class="w-4 h-4 mr-2"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                    />
+                                </svg>
+                                Generate Report
+                            </button>
+                            <button
+                                class="w-full flex items-center justify-center px-4 py-2 bg-green-600 border border-transparent rounded-lg font-medium text-sm text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200"
+                            >
+                                <svg
+                                    class="w-4 h-4 mr-2"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                    />
+                                </svg>
+                                Download Receipt
+                            </button>
+                            <button
+                                class="w-full flex items-center justify-center px-4 py-2 bg-white border border-gray-300 rounded-lg font-medium text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200"
+                            >
+                                <svg
+                                    class="w-4 h-4 mr-2"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m9.032 4.026a9.001 9.001 0 01-7.432 0m9.032-4.026A9.001 9.001 0 0112 3c-4.474 0-8.268 3.12-9.032 7.326m0 0A9.001 9.001 0 0012 21c4.474 0 8.268-3.12 9.032-7.326"
+                                    />
+                                </svg>
+                                View Expense History
+                            </button>
                         </div>
                     </div>
                 </div>

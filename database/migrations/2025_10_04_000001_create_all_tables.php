@@ -191,7 +191,7 @@ return new class extends Migration
         Schema::create('daily_summaries', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->date('date')->unique();
+            $table->date('date');
             $table->integer('total_tasks')->default(0);
             $table->integer('completed_tasks')->default(0);
             $table->decimal('productivity_score', 5, 2)->default(0.00);
