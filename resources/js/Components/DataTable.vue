@@ -72,95 +72,169 @@
             </div>
         </div>
 
-        <!-- Table -->
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th
-                            v-for="column in columns"
-                            :key="column.key"
-                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                            :class="
-                                column.sortable
-                                    ? 'cursor-pointer hover:bg-gray-100'
-                                    : ''
-                            "
-                            @click="column.sortable && handleSort(column.key)"
-                        >
-                            <div class="flex items-center">
-                                {{ column.label }}
-                                <span
-                                    v-if="
-                                        column.sortable &&
-                                        sortKey === column.key
-                                    "
-                                    class="ml-1"
-                                >
-                                    <svg
-                                        v-if="sortOrder === 'asc'"
-                                        class="h-4 w-4"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
+        <!-- Table with Enhanced Horizontal Scroll -->
+        <div class="relative">
+            <!-- Scroll Indicators -->
+            <div
+                v-if="showScrollIndicators"
+                class="absolute top-0 left-0 right-0 h-1 bg-gray-100 rounded-full overflow-hidden z-10"
+            >
+                <div
+                    class="h-full bg-indigo-500 transition-all duration-300"
+                    :style="{ width: scrollProgress + '%' }"
+                ></div>
+            </div>
+
+            <div
+                ref="scrollContainer"
+                class="overflow-x-auto scroll-smooth custom-scrollbar"
+                @scroll="handleScroll"
+            >
+                <table
+                    class="min-w-full divide-y divide-gray-200"
+                    :style="{ minWidth: tableMinWidth }"
+                >
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th
+                                v-for="column in columns"
+                                :key="column.key"
+                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                :class="
+                                    column.sortable
+                                        ? 'cursor-pointer hover:bg-gray-100'
+                                        : ''
+                                "
+                                @click="
+                                    column.sortable && handleSort(column.key)
+                                "
+                            >
+                                <div class="flex items-center">
+                                    {{ column.label }}
+                                    <span
+                                        v-if="
+                                            column.sortable &&
+                                            sortKey === column.key
+                                        "
+                                        class="ml-1"
                                     >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                    <svg
-                                        v-else
-                                        class="h-4 w-4"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                </span>
-                            </div>
-                        </th>
-                        <th
-                            class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                        <svg
+                                            v-if="sortOrder === 'asc'"
+                                            class="h-4 w-4"
+                                            fill="currentColor"
+                                            viewBox="0 0 20 20"
+                                        >
+                                            <path
+                                                fill-rule="evenodd"
+                                                d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
+                                                clip-rule="evenodd"
+                                            />
+                                        </svg>
+                                        <svg
+                                            v-else
+                                            class="h-4 w-4"
+                                            fill="currentColor"
+                                            viewBox="0 0 20 20"
+                                        >
+                                            <path
+                                                fill-rule="evenodd"
+                                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                                clip-rule="evenodd"
+                                            />
+                                        </svg>
+                                    </span>
+                                </div>
+                            </th>
+                            <th
+                                class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            >
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <tr
+                            v-for="item in paginatedData"
+                            :key="item.id"
+                            class="hover:bg-gray-50"
                         >
-                            Actions
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <tr
-                        v-for="item in paginatedData"
-                        :key="item.id"
-                        class="hover:bg-gray-50"
+                            <td
+                                v-for="column in columns"
+                                :key="column.key"
+                                class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                            >
+                                <slot :name="column.key" :item="item">
+                                    {{
+                                        formatValue(
+                                            item[column.key],
+                                            column.type
+                                        )
+                                    }}
+                                </slot>
+                            </td>
+                            <td
+                                class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
+                            >
+                                <slot name="actions" :item="item">
+                                    <ActionButtons
+                                        :item="item"
+                                        @view="$emit('view', item)"
+                                        @edit="$emit('edit', item)"
+                                        @delete="$emit('delete', item)"
+                                    />
+                                </slot>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Scroll Navigation Buttons -->
+            <div
+                v-if="showScrollButtons"
+                class="flex justify-center gap-2 mt-4"
+            >
+                <button
+                    @click="scrollLeft"
+                    :disabled="!canScrollLeft"
+                    class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <svg
+                        class="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                     >
-                        <td
-                            v-for="column in columns"
-                            :key="column.key"
-                            class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                        >
-                            <slot :name="column.key" :item="item">
-                                {{ formatValue(item[column.key], column.type) }}
-                            </slot>
-                        </td>
-                        <td
-                            class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
-                        >
-                            <slot name="actions" :item="item">
-                                <ActionButtons
-                                    :item="item"
-                                    @view="$emit('view', item)"
-                                    @edit="$emit('edit', item)"
-                                    @delete="$emit('delete', item)"
-                                />
-                            </slot>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 19l-7-7 7-7"
+                        />
+                    </svg>
+                    Scroll Left
+                </button>
+                <button
+                    @click="scrollRight"
+                    :disabled="!canScrollRight"
+                    class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Scroll Right
+                    <svg
+                        class="h-4 w-4 ml-1"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 5l7 7-7 7"
+                        />
+                    </svg>
+                </button>
+            </div>
         </div>
 
         <!-- Empty State -->
@@ -285,7 +359,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import ActionButtons from "./ActionButtons.vue";
 
 const props = defineProps({
@@ -314,6 +388,13 @@ const selectedFilter = ref("");
 const sortKey = ref("");
 const sortOrder = ref("asc");
 const currentPage = ref(1);
+const scrollContainer = ref(null);
+const scrollProgress = ref(0);
+const canScrollLeft = ref(false);
+const canScrollRight = ref(false);
+const showScrollIndicators = ref(false);
+const showScrollButtons = ref(false);
+const tableMinWidth = ref("100%");
 
 const filteredData = computed(() => {
     let filtered = [...props.data];
@@ -421,7 +502,108 @@ const goToPage = (page) => {
     }
 };
 
+// Horizontal scroll functionality
+const handleScroll = () => {
+    if (!scrollContainer.value) return;
+
+    const container = scrollContainer.value;
+    const scrollLeft = container.scrollLeft;
+    const scrollWidth = container.scrollWidth;
+    const clientWidth = container.clientWidth;
+
+    // Calculate scroll progress
+    const maxScroll = scrollWidth - clientWidth;
+    scrollProgress.value = maxScroll > 0 ? (scrollLeft / maxScroll) * 100 : 0;
+
+    // Update scroll button states
+    canScrollLeft.value = scrollLeft > 0;
+    canScrollRight.value = scrollLeft < maxScroll;
+
+    // Show indicators if scrollable
+    showScrollIndicators.value = maxScroll > 0;
+    showScrollButtons.value = maxScroll > 0;
+};
+
+const scrollLeft = () => {
+    if (scrollContainer.value) {
+        scrollContainer.value.scrollBy({ left: -300, behavior: "smooth" });
+    }
+};
+
+const scrollRight = () => {
+    if (scrollContainer.value) {
+        scrollContainer.value.scrollBy({ left: 300, behavior: "smooth" });
+    }
+};
+
+const updateTableWidth = () => {
+    // Calculate minimum width based on columns
+    const columnCount = props.columns.length;
+    const minWidth = Math.max(columnCount * 200, 1200); // Minimum 200px per column or 1200px total
+    tableMinWidth.value = `${minWidth}px`;
+};
+
+const checkScrollability = () => {
+    if (scrollContainer.value) {
+        const container = scrollContainer.value;
+        const isScrollable = container.scrollWidth > container.clientWidth;
+        showScrollIndicators.value = isScrollable;
+        showScrollButtons.value = isScrollable;
+        handleScroll(); // Update initial state
+    }
+};
+
+// Lifecycle hooks
+onMounted(() => {
+    updateTableWidth();
+    checkScrollability();
+
+    // Re-check on window resize
+    window.addEventListener("resize", checkScrollability);
+});
+
+onUnmounted(() => {
+    window.removeEventListener("resize", checkScrollability);
+});
+
 watch([searchQuery, selectedFilter], () => {
     currentPage.value = 1;
+    // Re-check scrollability after data changes
+    setTimeout(checkScrollability, 100);
 });
+
+// Watch for data changes to update scrollability
+watch(
+    () => props.data,
+    () => {
+        setTimeout(checkScrollability, 100);
+    },
+    { deep: true }
+);
 </script>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+    height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Firefox scrollbar styling */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+}
+</style>

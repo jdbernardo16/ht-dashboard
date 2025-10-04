@@ -29,7 +29,8 @@
                                         :key="client.id"
                                         :value="client.id"
                                     >
-                                        {{ client.name }}
+                                        {{ client.first_name }}
+                                        {{ client.last_name }}
                                     </option>
                                 </select>
                                 <InputError
@@ -128,11 +129,12 @@
                             <div class="mt-4">
                                 <InputLabel
                                     for="description"
-                                    value="Description"
+                                    value="Description *"
                                 />
                                 <textarea
                                     id="description"
                                     v-model="form.description"
+                                    required
                                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     rows="4"
                                     :class="{
@@ -150,12 +152,13 @@
                             <div>
                                 <InputLabel
                                     for="content_url"
-                                    value="Content URL"
+                                    value="Content URL *"
                                 />
                                 <TextInput
                                     id="content_url"
                                     v-model="form.content_url"
                                     type="url"
+                                    required
                                     class="mt-1 block w-full"
                                     :class="{
                                         'border-red-500':
@@ -195,12 +198,13 @@
                             <div>
                                 <InputLabel
                                     for="scheduled_date"
-                                    value="Scheduled Date"
+                                    value="Scheduled Date *"
                                 />
                                 <TextInput
                                     id="scheduled_date"
                                     v-model="form.scheduled_date"
                                     type="date"
+                                    required
                                     class="mt-1 block w-full"
                                     :class="{
                                         'border-red-500':
@@ -217,12 +221,13 @@
                             <div>
                                 <InputLabel
                                     for="published_date"
-                                    value="Published Date"
+                                    value="Published Date *"
                                 />
                                 <TextInput
                                     id="published_date"
                                     v-model="form.published_date"
                                     type="date"
+                                    required
                                     class="mt-1 block w-full"
                                     :class="{
                                         'border-red-500':
@@ -264,16 +269,39 @@
                                     for="content_category"
                                     value="Content Category"
                                 />
-                                <TextInput
+                                <select
                                     id="content_category"
                                     v-model="form.content_category"
-                                    type="text"
-                                    class="mt-1 block w-full"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     :class="{
                                         'border-red-500':
                                             form.errors.content_category,
                                     }"
-                                />
+                                >
+                                    <option value="">Select Category</option>
+                                    <option value="Social Media Post">
+                                        Social Media Post
+                                    </option>
+                                    <option value="Blog Article">
+                                        Blog Article
+                                    </option>
+                                    <option value="Email Newsletter">
+                                        Email Newsletter
+                                    </option>
+                                    <option value="Product Description">
+                                        Product Description
+                                    </option>
+                                    <option value="Marketing Campaign">
+                                        Marketing Campaign
+                                    </option>
+                                    <option value="Press Release">
+                                        Press Release
+                                    </option>
+                                    <option value="Video Content">
+                                        Video Content
+                                    </option>
+                                    <option value="Other">Other</option>
+                                </select>
                                 <InputError
                                     :message="form.errors.content_category"
                                     class="mt-2"
@@ -512,20 +540,19 @@
                             <!-- Image Upload -->
                             <div>
                                 <InputLabel value="Upload Image" class="mb-2" />
-                                <BaseFileUploader
+                                <ImageUploader
                                     v-model="form.image"
                                     label="Main Image"
-                                    :accept-types="['image']"
-                                    :multiple="false"
-                                    :max-size="10"
+                                    accept="image/*"
+                                    :max-size="10 * 1024 * 1024"
                                     description="Drag & drop image here or click to browse"
-                                    :with-preview="true"
-                                    :required="false"
                                     :error="form.errors.image"
+                                    @image-loaded="onImageLoaded"
                                 />
                                 <p class="text-xs text-gray-500 mt-2">
                                     Upload a single image file. Supported
-                                    formats: JPG, PNG, GIF, WebP (max 10MB)
+                                    formats: JPG, PNG, GIF, WebP (max 10MB,
+                                    100×100 to 4000×4000 pixels)
                                 </p>
                             </div>
 
@@ -535,21 +562,16 @@
                                     value="Upload Additional Files"
                                     class="mb-2"
                                 />
-                                <BaseFileUploader
+                                <SimpleFileUploader
                                     v-model="form.media"
                                     label="Additional Files"
-                                    :accept-types="[
-                                        'image',
-                                        'pdf',
-                                        'xlsx',
-                                        'csv',
-                                    ]"
+                                    accept="image/*,.pdf,.xlsx,.csv"
                                     :multiple="true"
-                                    :max-size="10"
+                                    :max-size="10 * 1024 * 1024"
+                                    :max-files="10"
                                     description="Drag & drop files here or click to browse"
-                                    :with-preview="false"
-                                    :required="false"
                                     :error="form.errors.media"
+                                    @change="onMediaChange"
                                 />
                                 <p class="text-xs text-gray-500 mt-2">
                                     You can upload up to 10 files. Supported
@@ -596,7 +618,8 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import TextInput from "@/Components/TextInput.vue";
-import BaseFileUploader from "@/Components/Shared/Fields/BaseFileUploader.vue";
+import ImageUploader from "@/Components/Forms/ImageUploader.vue";
+import SimpleFileUploader from "@/Components/Forms/SimpleFileUploader.vue";
 
 const props = defineProps({
     clients: {
@@ -627,7 +650,7 @@ const form = useForm({
     content_type: "",
     description: "",
     content_url: "",
-    image: null, // This will store either File object or FileData object
+    image: null, // This will store File object directly
     post_count: 1,
     scheduled_date: "",
     published_date: "",
@@ -637,31 +660,23 @@ const form = useForm({
     notes: "",
     meta_description: "",
     seo_keywords: "",
-    media: [],
+    media: [], // This will store array of File objects directly
 });
 
-// Watch for changes to the image field and preserve both File object and preview
-watch(
-    () => form.image,
-    (newImage) => {
-        if (
-            newImage &&
-            typeof newImage === "object" &&
-            newImage.file instanceof File
-        ) {
-            // If it's a FileData object with a file property, preserve the entire object
-            // to maintain both the file and preview data
-            // The form.image already contains the FileData object, so no need to modify it
-            console.log(
-                "FileData object received with file:",
-                newImage.file.name,
-                "and preview:",
-                newImage.preview ? "available" : "not available"
-            );
-        }
-    },
-    { deep: true }
-);
+// Image loaded handler
+const onImageLoaded = (imageData) => {
+    console.log("Image loaded:", imageData);
+    // You can store image dimensions if needed
+    form.image_dimensions = {
+        width: imageData.width,
+        height: imageData.height,
+    };
+};
+
+// Media change handler
+const onMediaChange = (files) => {
+    console.log("Media files changed:", files);
+};
 
 // Enhanced Tag Handling
 const tagInput = ref("");
@@ -830,44 +845,18 @@ const submitForm = () => {
         if (key === "media") {
             // Handle media file uploads (multiple files)
             if (Array.isArray(formDataToProcess.media)) {
-                formDataToProcess.media.forEach((fileData, index) => {
-                    if (fileData?.file instanceof File) {
-                        formData.append(`media[${index}]`, fileData.file);
-                    } else if (fileData instanceof File) {
-                        formData.append(`media[${index}]`, fileData);
+                formDataToProcess.media.forEach((file, index) => {
+                    if (file instanceof File) {
+                        formData.append(`media[${index}]`, file);
                     }
                 });
             }
         } else if (key === "image") {
-            console.log("Processing image field:", formDataToProcess.image);
-            // Handle single image file upload - extract File from FileData object
-            if (
-                formDataToProcess.image &&
-                typeof formDataToProcess.image === "object" &&
-                formDataToProcess.image.file instanceof File
-            ) {
-                // Case 1: FileData object with file property
-                formData.append(key, formDataToProcess.image.file);
-                console.log(
-                    "Appended image file from FileData object:",
-                    formDataToProcess.image.file.name
-                );
-            } else if (formDataToProcess.image instanceof File) {
-                // Case 2: Direct File object
+            // Handle single image file upload - direct File object
+            if (formDataToProcess.image instanceof File) {
                 formData.append(key, formDataToProcess.image);
                 console.log(
-                    "Appended direct File object:",
-                    formDataToProcess.image.name
-                );
-            } else if (
-                formDataToProcess.image &&
-                typeof formDataToProcess.image === "object" &&
-                formDataToProcess.image instanceof File
-            ) {
-                // Case 3: Object that is actually a File (edge case)
-                formData.append(key, formDataToProcess.image);
-                console.log(
-                    "Appended File object (wrapped case):",
+                    "Appended image file:",
                     formDataToProcess.image.name
                 );
             } else if (
@@ -875,16 +864,8 @@ const submitForm = () => {
                 formDataToProcess.image === undefined ||
                 formDataToProcess.image === ""
             ) {
-                // Case 4: Null, undefined, or empty string - don't append anything
+                // Null, undefined, or empty string - don't append anything
                 console.log("Image field is empty, skipping");
-            } else {
-                // Case 5: Invalid format - log error but don't append
-                console.error(
-                    "Image field is not a valid File object or FileData:",
-                    formDataToProcess.image,
-                    "Type:",
-                    typeof formDataToProcess.image
-                );
             }
         } else if (Array.isArray(formDataToProcess[key])) {
             // Handle arrays (like platform and tags) - ensure they're properly formatted as JSON

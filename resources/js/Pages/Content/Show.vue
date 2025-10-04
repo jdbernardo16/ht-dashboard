@@ -40,7 +40,11 @@
                                         <dd class="mt-1 text-sm text-gray-900">
                                             {{
                                                 props.contentPost.client
-                                                    ?.name || "N/A"
+                                                    .first_name
+                                            }}
+                                            {{
+                                                props.contentPost.client
+                                                    .last_name
                                             }}
                                         </dd>
                                     </div>
@@ -329,13 +333,13 @@
                         </div>
 
                         <!-- Image Display -->
-                        <div v-if="props.contentPost.image" class="mt-8">
+                        <div v-if="props.contentPost.image_url" class="mt-8">
                             <h3 class="text-lg font-medium text-gray-900 mb-4">
                                 Main Image
                             </h3>
                             <div class="bg-gray-50 rounded-lg p-6">
                                 <img
-                                    :src="props.contentPost.image"
+                                    :src="props.contentPost.image_url"
                                     alt="Content post image"
                                     class="max-w-full h-auto max-h-64 rounded-lg border shadow-sm"
                                     onerror="this.style.display='none'"
@@ -395,7 +399,7 @@
                                             </div>
                                         </div>
                                         <a
-                                            :href="media.file_path"
+                                            :href="media.url"
                                             target="_blank"
                                             class="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
                                         >

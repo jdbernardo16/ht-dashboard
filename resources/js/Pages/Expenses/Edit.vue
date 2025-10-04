@@ -287,6 +287,98 @@
                                 </p>
                             </div>
 
+                            <!-- Existing Receipts -->
+                            <div
+                                v-if="
+                                    props.expense.media &&
+                                    props.expense.media.length > 0
+                                "
+                            >
+                                <label
+                                    class="block text-sm font-medium text-gray-700 mb-2"
+                                >
+                                    Existing Receipts
+                                </label>
+                                <div
+                                    class="grid grid-cols-2 md:grid-cols-3 gap-4"
+                                >
+                                    <div
+                                        v-for="media in props.expense.media"
+                                        :key="media.id"
+                                        class="border rounded-lg p-3 bg-gray-50"
+                                    >
+                                        <div
+                                            class="flex items-center space-x-3"
+                                        >
+                                            <div class="flex-shrink-0">
+                                                <img
+                                                    v-if="
+                                                        media.mime_type.startsWith(
+                                                            'image/'
+                                                        )
+                                                    "
+                                                    :src="media.url"
+                                                    :alt="media.original_name"
+                                                    class="h-12 w-12 object-cover rounded"
+                                                />
+                                                <div
+                                                    v-else
+                                                    class="h-12 w-12 bg-blue-100 rounded flex items-center justify-center"
+                                                >
+                                                    <svg
+                                                        class="w-6 h-6 text-blue-600"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p
+                                                    class="text-sm font-medium text-gray-900 truncate"
+                                                >
+                                                    {{ media.original_name }}
+                                                </p>
+                                                <p
+                                                    class="text-xs text-gray-500"
+                                                >
+                                                    {{ media.formatted_size }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Receipt Upload -->
+                            <div>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 mb-2"
+                                >
+                                    Add More Receipts (Optional)
+                                </label>
+                                <ImageUploader
+                                    v-model="form.receipts"
+                                    :multiple="true"
+                                    accept="image/*,.pdf"
+                                    :max-size="10 * 1024 * 1024"
+                                    label="Upload additional receipts"
+                                    description="Drag & drop receipt images or PDFs here, or click to browse"
+                                    :error="form.errors.receipts"
+                                />
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Supported formats: JPG, PNG, WebP, PDF (Max
+                                    10MB each)
+                                </p>
+                            </div>
+
                             <!-- Submit Buttons -->
                             <div
                                 class="flex items-center justify-end space-x-3"
@@ -321,6 +413,7 @@
 <script setup>
 import { useForm } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import ImageUploader from "@/Components/Forms/ImageUploader.vue";
 
 const props = defineProps({
     expense: {
@@ -348,6 +441,7 @@ const form = useForm({
     receipt_number: props.expense.receipt_number || "",
     tax_amount: props.expense.tax_amount || 0,
     notes: props.expense.notes || "",
+    receipts: [],
 });
 
 const submitForm = () => {

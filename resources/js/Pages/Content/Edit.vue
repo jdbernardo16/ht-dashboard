@@ -29,7 +29,8 @@
                                         :key="client.id"
                                         :value="client.id"
                                     >
-                                        {{ client.name }}
+                                        {{ client.first_name }}
+                                        {{ client.last_name }}
                                     </option>
                                 </select>
                                 <InputError
@@ -128,11 +129,12 @@
                             <div>
                                 <InputLabel
                                     for="description"
-                                    value="Description"
+                                    value="Description *"
                                 />
                                 <textarea
                                     id="description"
                                     v-model="form.description"
+                                    required
                                     rows="3"
                                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     :class="{
@@ -150,12 +152,13 @@
                             <div>
                                 <InputLabel
                                     for="content_url"
-                                    value="Content URL"
+                                    value="Content URL *"
                                 />
                                 <TextInput
                                     id="content_url"
                                     v-model="form.content_url"
                                     type="url"
+                                    required
                                     class="mt-1 block w-full"
                                     :class="{
                                         'border-red-500':
@@ -195,12 +198,13 @@
                             <div>
                                 <InputLabel
                                     for="scheduled_date"
-                                    value="Scheduled Date"
+                                    value="Scheduled Date *"
                                 />
                                 <TextInput
                                     id="scheduled_date"
                                     v-model="form.scheduled_date"
                                     type="date"
+                                    required
                                     class="mt-1 block w-full"
                                     :class="{
                                         'border-red-500':
@@ -217,12 +221,13 @@
                             <div>
                                 <InputLabel
                                     for="published_date"
-                                    value="Published Date"
+                                    value="Published Date *"
                                 />
                                 <TextInput
                                     id="published_date"
                                     v-model="form.published_date"
                                     type="date"
+                                    required
                                     class="mt-1 block w-full"
                                     :class="{
                                         'border-red-500':
@@ -264,16 +269,39 @@
                                     for="content_category"
                                     value="Content Category"
                                 />
-                                <TextInput
+                                <select
                                     id="content_category"
                                     v-model="form.content_category"
-                                    type="text"
-                                    class="mt-1 block w-full"
+                                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     :class="{
                                         'border-red-500':
                                             form.errors.content_category,
                                     }"
-                                />
+                                >
+                                    <option value="">Select Category</option>
+                                    <option value="Social Media Post">
+                                        Social Media Post
+                                    </option>
+                                    <option value="Blog Article">
+                                        Blog Article
+                                    </option>
+                                    <option value="Email Newsletter">
+                                        Email Newsletter
+                                    </option>
+                                    <option value="Product Description">
+                                        Product Description
+                                    </option>
+                                    <option value="Marketing Campaign">
+                                        Marketing Campaign
+                                    </option>
+                                    <option value="Press Release">
+                                        Press Release
+                                    </option>
+                                    <option value="Video Content">
+                                        Video Content
+                                    </option>
+                                    <option value="Other">Other</option>
+                                </select>
                                 <InputError
                                     :message="form.errors.content_category"
                                     class="mt-2"
@@ -516,14 +544,14 @@
 
                                 <!-- Display existing image if available -->
                                 <div
-                                    v-if="props.contentPost.image"
+                                    v-if="props.contentPost.image_url"
                                     class="mb-4"
                                 >
                                     <p class="text-sm text-gray-600 mb-2">
                                         Current Image:
                                     </p>
                                     <img
-                                        :src="props.contentPost.image"
+                                        :src="props.contentPost.image_url"
                                         alt="Current content image"
                                         class="max-w-full h-auto max-h-48 rounded-lg border"
                                         onerror="this.style.display='none'"
@@ -534,15 +562,13 @@
                                     </p>
                                 </div>
 
-                                <BaseFileUploader
+                                <SimpleFileUploader
                                     v-model="form.image"
                                     label="Main Image"
-                                    :accept-types="['image']"
+                                    accept="image/*"
                                     :multiple="false"
-                                    :max-size="10"
+                                    :max-size="10 * 1024 * 1024"
                                     description="Drag & drop image here or click to browse"
-                                    :with-preview="true"
-                                    :required="false"
                                     :error="form.errors.image"
                                 />
                                 <p class="text-xs text-gray-500 mt-2">
@@ -599,7 +625,7 @@
                                                 >
                                             </div>
                                             <a
-                                                :href="media.file_path"
+                                                :href="media.url"
                                                 target="_blank"
                                                 class="text-indigo-600 hover:text-indigo-800 text-sm"
                                             >
@@ -613,20 +639,13 @@
                                     </p>
                                 </div>
 
-                                <BaseFileUploader
+                                <SimpleFileUploader
                                     v-model="form.media"
                                     label="Additional Files"
-                                    :accept-types="[
-                                        'image',
-                                        'pdf',
-                                        'xlsx',
-                                        'csv',
-                                    ]"
+                                    accept="image/*,.pdf,.xlsx,.csv"
                                     :multiple="true"
-                                    :max-size="10"
+                                    :max-size="10 * 1024 * 1024"
                                     description="Drag & drop files here or click to browse"
-                                    :with-preview="false"
-                                    :required="false"
                                     :error="form.errors.media"
                                 />
                                 <p class="text-xs text-gray-500 mt-2">
@@ -677,7 +696,8 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import TextInput from "@/Components/TextInput.vue";
 import InputError from "@/Components/InputError.vue";
-import BaseFileUploader from "@/Components/Shared/Fields/BaseFileUploader.vue";
+import ImageUploader from "@/Components/Forms/ImageUploader.vue";
+import SimpleFileUploader from "@/Components/Forms/SimpleFileUploader.vue";
 
 // Helper function to convert ISO datetime to date input format (YYYY-MM-DD)
 const formatDateForInput = (isoDate) => {
@@ -874,166 +894,23 @@ const addSuggestion = (suggestion) => {
 };
 
 const submitForm = () => {
-    // Create a copy of form data for processing
-    const formDataToProcess = { ...form.data() };
-
-    // Debug: Log all form data before processing
-    console.log("Original form data:", formDataToProcess);
-
-    // Fix client_id field handling - ensure it's not sending empty strings when null is expected
-    if (
-        formDataToProcess.client_id === "" ||
-        formDataToProcess.client_id === null
-    ) {
-        formDataToProcess.client_id = null;
-        console.log("Client ID set to null");
-    } else {
-        // Convert to number if it's a string
-        formDataToProcess.client_id = parseInt(formDataToProcess.client_id);
-        console.log(
-            "Client ID converted to number:",
-            formDataToProcess.client_id
-        );
-    }
-
-    // Fix date formatting for published_date field to ensure YYYY-MM-DD format
-    if (formDataToProcess.published_date) {
-        // If the date is already in YYYY-MM-DD format, keep it as is
-        // Otherwise, try to parse and reformat it
-        const date = new Date(formDataToProcess.published_date);
-        if (!isNaN(date.getTime())) {
-            // Format as YYYY-MM-DD
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, "0");
-            const day = String(date.getDate()).padStart(2, "0");
-            formDataToProcess.published_date = `${year}-${month}-${day}`;
-            console.log(
-                "Published date formatted:",
-                formDataToProcess.published_date
-            );
-        }
-    }
-
-    // Fix date formatting for scheduled_date field to ensure YYYY-MM-DD format
-    if (formDataToProcess.scheduled_date) {
-        // If the date is already in YYYY-MM-DD format, keep it as is
-        // Otherwise, try to parse and reformat it
-        const date = new Date(formDataToProcess.scheduled_date);
-        if (!isNaN(date.getTime())) {
-            // Format as YYYY-MM-DD
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, "0");
-            const day = String(date.getDate()).padStart(2, "0");
-            formDataToProcess.scheduled_date = `${year}-${month}-${day}`;
-            console.log(
-                "Scheduled date formatted:",
-                formDataToProcess.scheduled_date
-            );
-        }
-    }
-
-    // Fix nullable fields (content_url) to convert empty strings to null
-    if (formDataToProcess.content_url === "") {
-        formDataToProcess.content_url = null;
-        console.log("Content URL set to null");
-    }
-
-    // Convert File objects to FormData for proper file upload
-    const formData = new FormData();
-
-    // Add all processed form fields
-    Object.keys(formDataToProcess).forEach((key) => {
-        if (key === "media") {
-            // Handle media file uploads (multiple files) - extract File objects from FileData
-            if (Array.isArray(formDataToProcess.media)) {
-                formDataToProcess.media.forEach((fileData, index) => {
-                    if (fileData?.file instanceof File) {
-                        formData.append(`media[${index}]`, fileData.file);
-                    }
-                });
-            }
-        } else if (key === "image") {
-            console.log("Processing image field:", formDataToProcess.image);
-            // Handle single image file upload - extract File from FileData object
-            if (
-                formDataToProcess.image &&
-                formDataToProcess.image.file instanceof File
-            ) {
-                formData.append(key, formDataToProcess.image.file);
-                console.log(
-                    "Appended image file:",
-                    formDataToProcess.image.file.name
-                );
-            } else if (formDataToProcess.image instanceof File) {
-                formData.append(key, formDataToProcess.image);
-                console.log(
-                    "Appended direct File object:",
-                    formDataToProcess.image.name
-                );
-            } else {
-                console.log(
-                    "Image field is not a valid File object or FileData:",
-                    formDataToProcess.image
-                );
-            }
-        } else if (Array.isArray(formDataToProcess[key])) {
-            // Handle arrays (like platform and tags) - ensure they're properly formatted as JSON
-            if (key === "platform" || key === "tags") {
-                formData.append(key, JSON.stringify(formDataToProcess[key]));
-            } else {
-                formDataToProcess[key].forEach((item, index) => {
-                    formData.append(`${key}[${index}]`, item);
-                });
-            }
-        } else {
-            // Handle null values properly
-            if (formDataToProcess[key] === null) {
-                formData.append(key, "");
-            } else {
-                formData.append(key, formDataToProcess[key]);
-            }
-        }
-    });
-
-    // Debug: Log what's in the formData for key fields
-    console.log("FormData client_id:", formData.get("client_id"));
-    console.log("FormData published_date:", formData.get("published_date"));
-    console.log("FormData scheduled_date:", formData.get("scheduled_date"));
-    console.log("FormData content_url:", formData.get("content_url"));
-    console.log("FormData image field:", formData.get("image"));
-    console.log("Form image field value:", formDataToProcess.image);
-    console.log("Form image field type:", typeof formDataToProcess.image);
-
-    // Log the final form data for debugging
-    console.log("Final form data being submitted:");
-    for (let pair of formData.entries()) {
-        console.log(pair[0] + ":", pair[1]);
-    }
-
-    // Use FormData for the put request - let browser set Content-Type automatically
-    form.put(
-        route("content.web.update", props.contentPost.id),
-        {
-            data: formData,
-            // Remove manual Content-Type header - browser sets it automatically with boundary
+    // Use the standard Inertia form submission which automatically handles CSRF tokens
+    form.put(route("content.web.update", props.contentPost.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            console.log("Content post updated successfully");
+            router.visit(route("content.web.show", props.contentPost.id));
         },
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                console.log("Content post updated successfully");
-                router.visit(route("content.web.show", props.contentPost.id));
-            },
-            onError: (error) => {
-                console.error("Error updating content post:", error);
-                if (error.client_id) {
-                    console.error("Client ID error:", error.client_id);
-                }
-                if (error.content_type) {
-                    console.error("Content Type error:", error.content_type);
-                }
-            },
-        }
-    );
+        onError: (error) => {
+            console.error("Error updating content post:", error);
+            if (error.client_id) {
+                console.error("Client ID error:", error.client_id);
+            }
+            if (error.content_type) {
+                console.error("Content Type error:", error.content_type);
+            }
+        },
+    });
 };
 
 const goBack = () => {

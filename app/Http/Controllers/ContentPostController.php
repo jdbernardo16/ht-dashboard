@@ -4,747 +4,455 @@ namespace App\Http\Controllers;
 
 use App\Models\ContentPost;
 use App\Models\ContentPostMedia;
-use App\Models\User;
-use App\Models\Client;
+use App\Http\Requests\StoreContentPostRequest;
+use App\Http\Requests\UpdateContentPostRequest;
+use App\Services\FileStorageService;
 use App\Services\ImageService;
-use App\Services\FileValidationService;
-use App\Services\FileUploadService;
+use App\Exceptions\FileUploadException;
+use App\Exceptions\FileStorageException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use Inertia\Inertia;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 
 class ContentPostController extends Controller
 {
+    protected FileStorageService $fileStorageService;
     protected ImageService $imageService;
-    protected FileValidationService $fileValidationService;
-    protected FileUploadService $fileUploadService;
 
-    public function __construct(ImageService $imageService, FileValidationService $fileValidationService, FileUploadService $fileUploadService)
+    public function __construct(FileStorageService $fileStorageService, ImageService $imageService)
     {
+        $this->fileStorageService = $fileStorageService;
         $this->imageService = $imageService;
-        $this->fileValidationService = $fileValidationService;
-        $this->fileUploadService = $fileUploadService;
     }
 
     /**
-     * Display a listing of the content posts.
+     * Display a listing of the resource.
      */
     public function index(Request $request)
     {
         Gate::authorize('viewAny', ContentPost::class);
 
-        $query = ContentPost::with(['user', 'client']);
-
-        // Apply filters
-        if ($request->has('search')) {
-            $search = $request->get('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhere('content_url', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->has('status')) {
-            $query->where('status', $request->get('status'));
-        }
-
-        if ($request->has('platform')) {
-            $query->platform($request->get('platform'));
-        }
-
-        if ($request->has('content_type')) {
-            $query->where('content_type', $request->get('content_type'));
-        }
-
-        if ($request->has('date_from')) {
-            $query->whereDate('scheduled_date', '>=', $request->get('date_from'));
-        }
-
-        if ($request->has('date_to')) {
-            $query->whereDate('scheduled_date', '<=', $request->get('date_to'));
-        }
+        $query = ContentPost::with(['client', 'category', 'media']);
 
         // Role-based filtering
         if (Auth::user()->role === 'va') {
             $query->where('user_id', Auth::id());
         }
 
-        $contentPosts = $query->orderBy('created_at', 'desc')
-            ->paginate($request->get('per_page', 15));
+        // Filter by status
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
 
-        // Format the content posts data to match frontend expectations
-        $contentPosts->getCollection()->transform(function ($post) {
-            return [
-                'id' => $post->id,
-                'title' => $post->title,
-                'description' => $post->description,
-                'platform' => $post->platform,
-                'content_type' => $post->content_type,
-                'content_url' => $post->content_url,
-                'image' => $post->image,
-                'post_count' => $post->post_count,
-                'scheduled_date' => $post->scheduled_date,
-                'published_date' => $post->published_date,
-                'status' => $post->status,
-                'content_category' => $post->content_category,
-                'tags' => $post->tags,
-                'notes' => $post->notes,
-                'engagement_metrics' => $post->engagement_metrics,
-                'engagement_rate' => $post->engagement_rate,
-                'total_engagement' => $post->total_engagement,
-                'client' => $post->client ? [
-                    'id' => $post->client->id,
-                    'name' => $post->client->first_name . ' ' . $post->client->last_name,
-                    'email' => $post->client->email,
-                ] : null,
-                'user' => [
-                    'id' => $post->user->id,
-                    'name' => $post->user->first_name . ' ' . $post->user->last_name,
-                    'email' => $post->user->email,
-                ],
-                'created_at' => $post->created_at,
-                'updated_at' => $post->updated_at,
-            ];
-        });
+        // Filter by content type
+        if ($request->has('content_type') && $request->content_type !== 'all') {
+            $query->where('content_type', $request->content_type);
+        }
 
-        return Inertia::render('Content/Index', [
+        // Filter by client
+        if ($request->has('client_id') && $request->client_id) {
+            $query->where('client_id', $request->client_id);
+        }
+
+        // Search functionality
+        if ($request->has('search') && $request->search) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('description', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('content_category', 'LIKE', "%{$searchTerm}%");
+            });
+        }
+
+        // Date range filtering
+        if ($request->has('date_from') && $request->date_from) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->has('date_to') && $request->date_to) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        $contentPosts = $query->paginate(15)->withQueryString();
+
+        // Get filter data
+        $clients = Auth::user()->role !== 'va'
+            ? \App\Models\Client::orderByRaw("CONCAT(first_name, ' ', last_name) ASC")->get()
+            : collect([]);
+
+        return inertia('Content/Index', [
             'contentPosts' => $contentPosts,
-            'filters' => $request->only(['search', 'status', 'platform', 'content_type', 'date_from', 'date_to'])
+            'filters' => $request->only(['status', 'content_type', 'client_id', 'search', 'date_from', 'date_to', 'sort_by', 'sort_order']),
+            'clients' => $clients,
         ]);
     }
 
     /**
-     * Show the form for creating a new content post.
+     * Show the form for creating a new resource.
      */
     public function create()
     {
         Gate::authorize('create', ContentPost::class);
 
-        $clients = Client::select('id', 'first_name', 'last_name', 'email')
-            ->orderBy('first_name')
-            ->orderBy('last_name')
-            ->get()
-            ->map(function ($client) {
-                return [
-                    'id' => $client->id,
-                    'name' => $client->first_name . ' ' . $client->last_name,
-                    'email' => $client->email
-                ];
-            });
+        $clients = Auth::user()->role !== 'va'
+            ? \App\Models\Client::orderByRaw("CONCAT(first_name, ' ', last_name) ASC")->get()
+            : collect([]);
+            
+        $categories = \App\Models\Category::orderBy('name')->get();
 
-        return Inertia::render('Content/Create', [
-            'clients' => $clients
+        return inertia('Content/Create', [
+            'clients' => $clients,
+            'categories' => $categories,
         ]);
     }
 
     /**
-     * Store a newly created content post in storage.
+     * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreContentPostRequest $request)
     {
-        Gate::authorize('create', ContentPost::class);
-
-        Log::info('ContentPost store method called', [
-            'request_method' => $request->method(),
-            'content_type' => $request->header('Content-Type'),
-            'has_files' => $request->hasFile('image') || $request->hasFile('media'),
-            'all_input_keys' => array_keys($request->all()),
-            'files_keys' => array_keys($request->allFiles()),
-            'raw_files' => $_FILES ?? 'No $_FILES',
-            'request_all' => $request->all(),
-            'image_input_value' => $request->input('image'),
-            'has_image_input' => $request->has('image'),
-            'image_file_info' => $request->hasFile('image') ? (
-                is_array($request->file('image')) ?
-                'Image is array: ' . json_encode(array_map(function ($file) {
-                    return [
-                        'original_name' => $file->getClientOriginalName(),
-                        'mime_type' => $file->getMimeType(),
-                        'size' => $file->getSize(),
-                        'path' => $file->getPathname(),
-                        'is_valid' => $file->isValid(),
-                        'error' => $file->getError(),
-                        'getimagesize' => @getimagesize($file->getPathname()) ?: 'Failed to get image size'
-                    ];
-                }, $request->file('image'))) :
-                [
-                    'original_name' => $request->file('image')->getClientOriginalName(),
-                    'mime_type' => $request->file('image')->getMimeType(),
-                    'size' => $request->file('image')->getSize(),
-                    'path' => $request->file('image')->getPathname(),
-                    'is_valid' => $request->file('image')->isValid(),
-                    'error' => $request->file('image')->getError(),
-                    'getimagesize' => @getimagesize($request->file('image')->getPathname()) ?: 'Failed to get image size'
-                ]
-            ) : 'No image file'
-        ]);
-
-        // Handle platform JSON string conversion before validation
-        $requestData = $request->all();
-        if (isset($requestData['platform']) && is_string($requestData['platform'])) {
-            try {
-                $requestData['platform'] = json_decode($requestData['platform'], true, 512, JSON_THROW_ON_ERROR);
-            } catch (\JsonException $e) {
-                // If JSON decoding fails, set to empty array
-                $requestData['platform'] = [];
-            }
-        }
+        $validated = $request->validated();
+        $imagePath = null;
+        $mediaPaths = [];
 
         try {
-            $validated = $request->validate([
-                'client_id' => 'required|exists:clients,id',
-                'platform' => 'required|array', // Now expecting an array after JSON decode
-                'content_type' => 'required|string|max:255',
-                'title' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'content_url' => 'nullable|string|max:255',
-                'image' => 'nullable|file|mimes:jpeg,png,jpg,gif,webp|max:10240', // 10MB max for images (will be optimized)
-                'post_count' => 'nullable|integer|min:1',
-                'scheduled_date' => 'nullable|date',
-                'published_date' => 'nullable|date',
-                'status' => 'required|in:draft,scheduled,published,archived',
-                'content_category' => 'nullable|string|max:255',
-                'tags' => 'nullable',
-                'tags.*' => 'nullable|string',
-                'notes' => 'nullable|string',
-                'meta_description' => 'nullable|string|max:255',
-                'seo_keywords' => 'nullable|string|max:255',
-                'engagement_metrics' => 'nullable|array',
-                'media' => 'nullable|array',
-                'media.*' => 'file|mimes:jpeg,png,jpg,gif,pdf,doc,docx,txt|max:10240', // 10MB max
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('ContentPost validation failed', [
-                'errors' => $e->errors(),
-                'request_data' => $request->all(),
-                'files_data' => $request->allFiles()
-            ]);
-            throw $e;
-        }
-
-        $validated['user_id'] = Auth::id();
-
-        // Remove image from validated data since it's a file upload
-        $image = $validated['image'] ?? null;
-        unset($validated['image']);
-
-        $contentPost = ContentPost::create($validated);
-
-        // Process image upload if any
-        if ($request->hasFile('image')) {
-            try {
-                $uploadResult = $this->fileUploadService->handleFileUploadFromRequest(
-                    $request,
-                    'image',
-                    'image',
-                    10 // 10MB max size
-                );
-
-                if ($uploadResult['success']) {
-                    $updateResult = $contentPost->update(['image' => $uploadResult['data']['file_path']]);
-                    Log::info('ContentPost image field updated with processed image', [
-                        'success' => $updateResult,
-                        'path' => $uploadResult['data']['file_path'],
-                        'original_dimensions' => ($uploadResult['data']['width'] ?? 'unknown') . 'x' . ($uploadResult['data']['height'] ?? 'unknown')
-                    ]);
-                } else {
-                    Log::error('Image upload failed in store method', [
-                        'errors' => $uploadResult['errors']
-                    ]);
-
-                    // Return user-friendly error message
-                    return back()->withErrors([
-                        'image' => 'Failed to upload image: ' . implode(', ', $uploadResult['errors'])
-                    ])->withInput();
-                }
-            } catch (\Exception $e) {
-                Log::error('Image processing failed in store method', [
-                    'error' => $e->getMessage()
-                ]);
-
-                // Return user-friendly error message
-                return back()->withErrors([
-                    'image' => 'Failed to process image: ' . $e->getMessage()
-                ])->withInput();
+            // Handle main image upload
+            if ($request->hasFile('image')) {
+                $imagePath = $this->processImage($request->file('image'));
             }
-        } else {
-            Log::info('No image file detected in store method request');
-        }
 
-        // Process media uploads if any
-        if ($request->hasFile('media')) {
-            try {
-                $uploadResult = $this->fileUploadService->handleMultipleFileUploadFromRequest(
-                    $request,
-                    'media',
-                    'file', // Use generic file type to allow all supported types
-                    10 // 10MB max size
-                );
+            // Create content post
+            $contentPost = ContentPost::create([
+                'user_id' => Auth::id(),
+                'client_id' => $validated['client_id'] ?? null,
+                'category_id' => $validated['category_id'] ?? null,
+                'platform' => $validated['platform'] ?? [],
+                'content_type' => $validated['content_type'],
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? null,
+                'image' => $imagePath,
+                'content_category' => $validated['content_category'] ?? null,
+                'tags' => $validated['tags'] ?? [],
+                'notes' => $validated['notes'] ?? null,
+                'meta_description' => $validated['meta_description'] ?? null,
+                'seo_keywords' => $validated['seo_keywords'] ?? null,
+                'status' => $validated['status'],
+                'scheduled_date' => $validated['scheduled_date'] ?? null,
+                'content_url' => $validated['content_url'] ?? null,
+                'published_date' => $validated['published_date'] ?? null,
+                'post_count' => $validated['post_count'] ?? 0,
+            ]);
 
-                if ($uploadResult['success']) {
-                    $successfulFiles = $uploadResult['data']['successful_files'] ?? [];
-                    $failedFiles = $uploadResult['data']['failed_files'] ?? [];
-
-                    // Process successful files
-                    foreach ($successfulFiles as $fileData) {
-                        $this->fileUploadService->createMediaRecord(
-                            $fileData,
-                            $contentPost->id,
-                            Auth::id(),
-                            false, // Not primary
-                            count($successfulFiles) // Set order based on position
-                        );
-                    }
-
-                    // Log any failed files
-                    if (!empty($failedFiles)) {
-                        Log::warning('Some media files failed to upload', [
-                            'failed_files' => $failedFiles,
-                            'content_post_id' => $contentPost->id
-                        ]);
-                    }
-                } else {
-                    Log::error('Media upload failed', [
-                        'errors' => $uploadResult['errors'],
-                        'content_post_id' => $contentPost->id
-                    ]);
-
-                    // Return user-friendly error message
-                    return back()->withErrors([
-                        'media' => 'Failed to upload media files: ' . implode(', ', $uploadResult['errors'])
-                    ])->withInput();
-                }
-            } catch (\Exception $e) {
-                Log::error('Media processing failed', [
-                    'error' => $e->getMessage(),
-                    'content_post_id' => $contentPost->id
-                ]);
-
-                // Return user-friendly error message
-                return back()->withErrors([
-                    'media' => 'Failed to process media files: ' . $e->getMessage()
-                ])->withInput();
+            // Handle media files
+            if ($request->hasFile('media')) {
+                $mediaPaths = $this->processMediaFiles($request->file('media'), $contentPost->id);
             }
-        }
 
-        return Inertia::render('Content/Show', [
-            'contentPost' => [
-                'id' => $contentPost->id,
+            Log::info('ContentPost created successfully', [
+                'content_post_id' => $contentPost->id,
                 'title' => $contentPost->title,
-                'description' => $contentPost->description,
-                'platform' => $contentPost->platform,
-                'content_type' => $contentPost->content_type,
-                'content_url' => $contentPost->content_url,
-                'image' => $contentPost->image,
-                'post_count' => $contentPost->post_count,
-                'scheduled_date' => $contentPost->scheduled_date,
-                'published_date' => $contentPost->published_date,
-                'status' => $contentPost->status,
-                'content_category' => $contentPost->content_category,
-                'tags' => $contentPost->tags,
-                'notes' => $contentPost->notes,
-                'meta_description' => $contentPost->meta_description,
-                'seo_keywords' => $contentPost->seo_keywords,
-                'engagement_metrics' => $contentPost->engagement_metrics,
-                'engagement_rate' => $contentPost->engagement_rate,
-                'total_engagement' => $contentPost->total_engagement,
-                'client' => $contentPost->client ? [
-                    'id' => $contentPost->client->id,
-                    'name' => $contentPost->client->first_name . ' ' . $contentPost->client->last_name,
-                    'email' => $contentPost->client->email,
-                ] : null,
-                'user' => [
-                    'id' => $contentPost->user->id,
-                    'name' => $contentPost->user->first_name . ' ' . $contentPost->user->last_name,
-                    'email' => $contentPost->user->email,
-                ],
-                'created_at' => $contentPost->created_at,
-                'updated_at' => $contentPost->updated_at,
-            ],
-            'success' => 'Content post created successfully'
-        ]);
-    }
-
-    /**
-     * Display the specified content post.
-     */
-    public function show(ContentPost $contentPost)
-    {
-        Gate::authorize('view', $contentPost);
-
-        $contentPost->load(['user', 'client']);
-
-        return Inertia::render('Content/Show', [
-            'contentPost' => [
-                'id' => $contentPost->id,
-                'title' => $contentPost->title,
-                'description' => $contentPost->description,
-                'platform' => $contentPost->platform,
-                'content_type' => $contentPost->content_type,
-                'content_url' => $contentPost->content_url,
-                'image' => $contentPost->image,
-                'post_count' => $contentPost->post_count,
-                'scheduled_date' => $contentPost->scheduled_date,
-                'published_date' => $contentPost->published_date,
-                'status' => $contentPost->status,
-                'content_category' => $contentPost->content_category,
-                'tags' => $contentPost->tags,
-                'notes' => $contentPost->notes,
-                'meta_description' => $contentPost->meta_description,
-                'seo_keywords' => $contentPost->seo_keywords,
-                'engagement_metrics' => $contentPost->engagement_metrics,
-                'engagement_rate' => $contentPost->engagement_rate,
-                'total_engagement' => $contentPost->total_engagement,
-                'client' => $contentPost->client ? [
-                    'id' => $contentPost->client->id,
-                    'name' => $contentPost->client->first_name . ' ' . $contentPost->client->last_name,
-                    'email' => $contentPost->client->email,
-                ] : null,
-                'user' => [
-                    'id' => $contentPost->user->id,
-                    'name' => $contentPost->user->first_name . ' ' . $contentPost->user->last_name,
-                    'email' => $contentPost->user->email,
-                ],
-                'created_at' => $contentPost->created_at,
-                'updated_at' => $contentPost->updated_at,
-            ]
-        ]);
-    }
-
-    /**
-     * Show the form for editing the specified content post.
-     */
-    public function edit(ContentPost $contentPost)
-    {
-        Gate::authorize('update', $contentPost);
-
-        $clients = Client::select('id', 'first_name', 'last_name', 'email')
-            ->orderBy('first_name')
-            ->orderBy('last_name')
-            ->get()
-            ->map(function ($client) {
-                return [
-                    'id' => $client->id,
-                    'name' => $client->first_name . ' ' . $client->last_name,
-                    'email' => $client->email
-                ];
-            });
-
-        $contentPost->load(['user', 'client', 'media']);
-
-        return Inertia::render('Content/Edit', [
-            'contentPost' => [
-                'id' => $contentPost->id,
-                'client_id' => $contentPost->client_id,
-                'title' => $contentPost->title,
-                'description' => $contentPost->description,
-                'platform' => $contentPost->platform,
-                'content_type' => $contentPost->content_type,
-                'content_url' => $contentPost->content_url,
-                'image' => $contentPost->image,
-                'post_count' => $contentPost->post_count,
-                'scheduled_date' => $contentPost->scheduled_date,
-                'published_date' => $contentPost->published_date,
-                'status' => $contentPost->status,
-                'content_category' => $contentPost->content_category,
-                'tags' => $contentPost->tags,
-                'notes' => $contentPost->notes,
-                'meta_description' => $contentPost->meta_description,
-                'seo_keywords' => $contentPost->seo_keywords,
-                'engagement_metrics' => $contentPost->engagement_metrics,
-                'engagement_rate' => $contentPost->engagement_rate,
-                'total_engagement' => $contentPost->total_engagement,
-                'client' => $contentPost->client ? [
-                    'id' => $contentPost->client->id,
-                    'name' => $contentPost->client->first_name . ' ' . $contentPost->client->last_name,
-                    'email' => $contentPost->client->email,
-                ] : null,
-                'media' => $contentPost->media->map(function ($media) {
-                    return [
-                        'id' => $media->id,
-                        'file_name' => $media->file_name,
-                        'file_path' => $media->file_path,
-                        'url' => $media->url,
-                        'mime_type' => $media->mime_type,
-                        'file_size' => $media->file_size,
-                        'original_name' => $media->original_name,
-                        'is_primary' => $media->is_primary,
-                        'order' => $media->order,
-                    ];
-                }),
-            ],
-            'clients' => $clients
-        ]);
-    }
-
-    /**
-     * Update the specified content post in storage.
-     */
-    public function update(Request $request, ContentPost $contentPost)
-    {
-        Gate::authorize('update', $contentPost);
-
-        Log::info('ContentPost update method called', [
-            'content_post_id' => $contentPost->id,
-            'request_method' => $request->method(),
-            'content_type' => $request->header('Content-Type'),
-            'has_files' => $request->hasFile('image') || $request->hasFile('media'),
-            'all_input_keys' => array_keys($request->all()),
-            'files_keys' => array_keys($request->allFiles()),
-            'raw_files' => $_FILES ?? 'No $_FILES',
-            'image_file_info' => $request->hasFile('image') ? (
-                is_array($request->file('image')) ?
-                'Image is array: ' . json_encode(array_map(function ($file) {
-                    return [
-                        'original_name' => $file->getClientOriginalName(),
-                        'mime_type' => $file->getMimeType(),
-                        'size' => $file->getSize(),
-                        'path' => $file->getPathname(),
-                        'is_valid' => $file->isValid(),
-                        'error' => $file->getError(),
-                        'getimagesize' => @getimagesize($file->getPathname()) ?: 'Failed to get image size'
-                    ];
-                }, $request->file('image'))) :
-                [
-                    'original_name' => $request->file('image')->getClientOriginalName(),
-                    'mime_type' => $request->file('image')->getMimeType(),
-                    'size' => $request->file('image')->getSize(),
-                    'path' => $request->file('image')->getPathname(),
-                    'is_valid' => $request->file('image')->isValid(),
-                    'error' => $request->file('image')->getError(),
-                    'getimagesize' => @getimagesize($request->file('image')->getPathname()) ?: 'Failed to get image size'
-                ]
-            ) : 'No image file'
-        ]);
-
-        // Handle platform JSON string conversion before validation
-        $requestData = $request->all();
-        if (isset($requestData['platform']) && is_string($requestData['platform'])) {
-            try {
-                $requestData['platform'] = json_decode($requestData['platform'], true, 512, JSON_THROW_ON_ERROR);
-            } catch (\JsonException $e) {
-                // If JSON decoding fails, set to empty array
-                $requestData['platform'] = [];
-            }
-        }
-
-        try {
-            $validated = $request->validate([
-                'client_id' => 'sometimes|required|exists:clients,id',
-                'platform' => 'sometimes|required|array', // Now expecting an array after JSON decode
-                'content_type' => 'sometimes|required|string|max:255',
-                'title' => 'sometimes|required|string|max:255',
-                'description' => 'nullable|string',
-                'content_url' => 'nullable|string|max:255',
-                'image' => 'nullable|file|mimes:jpeg,png,jpg,gif,webp|max:10240', // 10MB max for images (will be optimized)
-                'post_count' => 'nullable|integer|min:1',
-                'scheduled_date' => 'nullable|date',
-                'published_date' => 'nullable|date',
-                'status' => 'sometimes|required|in:draft,scheduled,published,archived',
-                'content_category' => 'nullable|string|max:255',
-                'tags' => 'nullable',
-                'notes' => 'nullable|string',
-                'meta_description' => 'nullable|string|max:255',
-                'seo_keywords' => 'nullable|string|max:255',
-                'engagement_metrics' => 'nullable|array',
-                'media' => 'nullable|array',
-                'media.*' => 'file|mimes:jpeg,png,jpg,gif,pdf,doc,docx,txt|max:10240', // 10MB max
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('ContentPost validation failed', [
-                'errors' => $e->errors(),
-                'request_data' => $request->all(),
-                'files_data' => $request->allFiles()
-            ]);
-            throw $e;
-        }
-
-        $oldStatus = $contentPost->status;
-
-        // Remove image from validated data since it's a file upload
-        $image = $validated['image'] ?? null;
-        unset($validated['image']);
-
-        // Handle tags JSON string conversion
-        if (isset($validated['tags']) && is_string($validated['tags'])) {
-            try {
-                $validated['tags'] = json_decode($validated['tags'], true, 512, JSON_THROW_ON_ERROR);
-            } catch (\JsonException $e) {
-                // If JSON decoding fails, treat as comma-separated string
-                $validated['tags'] = array_filter(array_map('trim', explode(',', $validated['tags'])));
-            }
-        }
-
-        $contentPost->update($validated);
-
-        // Process image upload if any
-        if ($request->hasFile('image')) {
-            Log::info('Image upload detected in update method', [
-                'old_image' => $contentPost->image
+                'has_image' => !is_null($imagePath),
+                'media_count' => count($mediaPaths)
             ]);
 
-            try {
-                // Delete old image if exists
-                if ($contentPost->image) {
-                    $deleteResult = $this->imageService->deleteImage($contentPost->image);
-                    Log::info('Old image deletion attempted', [
-                        'path' => $contentPost->image,
-                        'success' => $deleteResult
-                    ]);
-                }
+            return redirect()
+                ->route('content.web.show', $contentPost)
+                ->with('success', 'Content post created successfully.');
 
-                $uploadResult = $this->fileUploadService->handleFileUploadFromRequest(
-                    $request,
-                    'image',
-                    'image',
-                    10 // 10MB max size
-                );
+        } catch (\Exception $e) {
+            Log::error('Failed to create content post', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
-                if ($uploadResult['success']) {
-                    $updateResult = $contentPost->update(['image' => $uploadResult['data']['file_path']]);
-                    Log::info('ContentPost image field updated with processed image', [
-                        'success' => $updateResult,
-                        'path' => $uploadResult['data']['file_path'],
-                        'original_dimensions' => ($uploadResult['data']['width'] ?? 'unknown') . 'x' . ($uploadResult['data']['height'] ?? 'unknown')
-                    ]);
-                } else {
-                    Log::error('Image upload failed in update method', [
-                        'errors' => $uploadResult['errors']
-                    ]);
+            // Clean up uploaded files on error
+            $this->cleanupUploadedFiles($imagePath, $mediaPaths);
 
-                    // Return user-friendly error message
-                    return back()->withErrors([
-                        'image' => 'Failed to upload image: ' . implode(', ', $uploadResult['errors'])
-                    ])->withInput();
-                }
-            } catch (\Exception $e) {
-                Log::error('Image processing failed in update method', [
-                    'error' => $e->getMessage()
-                ]);
-
-                // Return user-friendly error message
-                return back()->withErrors([
-                    'image' => 'Failed to process image: ' . $e->getMessage()
-                ])->withInput();
-            }
-        } else {
-            Log::info('No image file detected in update method request');
-        }
-
-        // Process media uploads if any
-        if ($request->hasFile('media')) {
-            try {
-                $uploadResult = $this->fileUploadService->handleMultipleFileUploadFromRequest(
-                    $request,
-                    'media',
-                    'file', // Use generic file type to allow all supported types
-                    10 // 10MB max size
-                );
-
-                if ($uploadResult['success']) {
-                    $successfulFiles = $uploadResult['data']['successful_files'] ?? [];
-                    $failedFiles = $uploadResult['data']['failed_files'] ?? [];
-
-                    // Process successful files
-                    foreach ($successfulFiles as $fileData) {
-                        $this->fileUploadService->createMediaRecord(
-                            $fileData,
-                            $contentPost->id,
-                            Auth::id(),
-                            false, // Not primary
-                            count($successfulFiles) // Set order based on position
-                        );
-                    }
-
-                    // Log any failed files
-                    if (!empty($failedFiles)) {
-                        Log::warning('Some media files failed to upload', [
-                            'failed_files' => $failedFiles,
-                            'content_post_id' => $contentPost->id
-                        ]);
-                    }
-                } else {
-                    Log::error('Media upload failed', [
-                        'errors' => $uploadResult['errors'],
-                        'content_post_id' => $contentPost->id
-                    ]);
-
-                    // Return user-friendly error message
-                    return back()->withErrors([
-                        'media' => 'Failed to upload media files: ' . implode(', ', $uploadResult['errors'])
-                    ])->withInput();
-                }
-            } catch (\Exception $e) {
-                Log::error('Media processing failed', [
-                    'error' => $e->getMessage(),
-                    'content_post_id' => $contentPost->id
-                ]);
-
-                // Return user-friendly error message
-                return back()->withErrors([
-                    'media' => 'Failed to process media files: ' . $e->getMessage()
-                ])->withInput();
-            }
-        }
-
-        // Send notification if status changed to published
-        if ($oldStatus !== 'published' && $contentPost->status === 'published') {
-            $platform = !empty($contentPost->platform) ? implode(', ', $contentPost->platform) : 'multiple platforms';
-            \App\Services\NotificationService::sendContentPublication(
-                $contentPost->user,
-                $contentPost->title,
-                $platform,
-                ['content_id' => $contentPost->id]
+            throw new FileUploadException(
+                'Failed to create content post',
+                ['original_error' => $e->getMessage()],
+                'content_post_creation'
             );
         }
-
-        return redirect()->route('content.web.show', $contentPost->id)
-            ->with('success', 'Content post updated successfully');
     }
 
     /**
-     * Remove the specified content post from storage.
+     * Display the specified resource.
      */
-    public function destroy(ContentPost $contentPost)
+    public function show(ContentPost $content_post)
     {
-        Gate::authorize('delete', $contentPost);
+        Gate::authorize('view', $content_post);
+
+        $content_post->load(['client', 'category', 'user', 'media' => function ($query) {
+            $query->orderBy('order');
+        }]);
+
+        return inertia('Content/Show', [
+            'contentPost' => $content_post,
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(ContentPost $content_post)
+    {
+        Gate::authorize('update', $content_post);
+
+        $content_post->load(['media' => function ($query) {
+            $query->orderBy('order');
+        }]);
+
+        $clients = Auth::user()->role !== 'va'
+            ? \App\Models\Client::orderByRaw("CONCAT(first_name, ' ', last_name) ASC")->get()
+            : collect([]);
+            
+        $categories = \App\Models\Category::orderBy('name')->get();
+
+        return inertia('Content/Edit', [
+            'contentPost' => $content_post,
+            'clients' => $clients,
+            'categories' => $categories,
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(UpdateContentPostRequest $request, ContentPost $content_post)
+    {
+        Gate::authorize('update', $content_post);
+        
+        $validated = $request->validated();
+        $oldImagePath = $content_post->image;
+        $newImagePath = $oldImagePath; // Keep existing by default
+        $newMediaPaths = [];
+
+        try {
+            // Handle main image replacement
+            if ($request->hasFile('image')) {
+                $newImagePath = $this->processImage($request->file('image'));
+            }
+
+            // Handle new media files
+            if ($request->hasFile('media')) {
+                $newMediaPaths = $this->processMediaFiles($request->file('media'), $content_post->id);
+            }
+
+            // Handle media file removal
+            if ($request->has('remove_media')) {
+                $this->removeMediaFiles($request->input('remove_media'), $content_post);
+            }
+
+            // Update content post
+            $content_post->update([
+                'client_id' => $validated['client_id'] ?? $content_post->client_id,
+                'category_id' => $validated['category_id'] ?? $content_post->category_id,
+                'platform' => $validated['platform'] ?? $content_post->platform,
+                'content_type' => $validated['content_type'],
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? $content_post->description,
+                'image' => $newImagePath,
+                'content_category' => $validated['content_category'] ?? $content_post->content_category,
+                'tags' => $validated['tags'] ?? $content_post->tags,
+                'notes' => $validated['notes'] ?? $content_post->notes,
+                'meta_description' => $validated['meta_description'] ?? $content_post->meta_description,
+                'seo_keywords' => $validated['seo_keywords'] ?? $content_post->seo_keywords,
+                'status' => $validated['status'],
+                'scheduled_date' => $validated['scheduled_date'] ?? $content_post->scheduled_date,
+                'content_url' => $validated['content_url'] ?? $content_post->content_url,
+                'published_date' => $validated['published_date'] ?? $content_post->published_date,
+                'post_count' => $validated['post_count'] ?? $content_post->post_count,
+            ]);
+
+            // Delete old image if it was replaced
+            if ($oldImagePath && $newImagePath !== $oldImagePath) {
+                $this->imageService->deleteImage($oldImagePath);
+            }
+
+            Log::info('Content post updated successfully', [
+                'content_post_id' => $content_post->id,
+                'title' => $content_post->title,
+                'image_updated' => $newImagePath !== $oldImagePath,
+                'new_media_count' => count($newMediaPaths)
+            ]);
+
+            return redirect()
+                ->route('content.web.show', $content_post)
+                ->with('success', 'Content post updated successfully.');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to update content post', [
+                'content_post_id' => $content_post->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // Clean up newly uploaded files on error
+            $this->cleanupUploadedFiles(
+                $newImagePath !== $oldImagePath ? $newImagePath : null,
+                $newMediaPaths
+            );
+
+            throw new FileUploadException(
+                'Failed to update content post',
+                ['original_error' => $e->getMessage()],
+                'content_post_update'
+            );
+        }
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(ContentPost $content_post)
+    {
+        Gate::authorize('delete', $content_post);
 
         try {
             // Clean up associated images
-            if ($contentPost->image) {
-                $this->imageService->deleteImage($contentPost->image);
-                Log::info('ContentPost image cleaned up during deletion', ['path' => $contentPost->image]);
+            if ($content_post->image) {
+                $this->imageService->deleteImage($content_post->image);
             }
 
             // Clean up associated media files
-            $mediaFiles = $contentPost->media->pluck('file_path')->toArray();
+            $mediaFiles = $content_post->media->pluck('file_path')->toArray();
             if (!empty($mediaFiles)) {
-                $deleteResults = $this->imageService->deleteImages($mediaFiles);
-                Log::info('ContentPost media files cleaned up during deletion', [
-                    'files' => $mediaFiles,
-                    'results' => $deleteResults
-                ]);
+                $this->imageService->deleteImages($mediaFiles);
             }
 
-            $contentPost->delete();
+            $content_post->delete();
 
-            Log::info('ContentPost deleted successfully', ['id' => $contentPost->id]);
+            Log::info('ContentPost deleted successfully', ['id' => $content_post->id]);
 
-            return redirect()->route('content.web.index')
+            return redirect()
+                ->route('content.web.index')
                 ->with('success', 'Content post deleted successfully');
+
         } catch (\Exception $e) {
             Log::error('ContentPost deletion failed', [
                 'error' => $e->getMessage(),
-                'content_post_id' => $contentPost->id
+                'content_post_id' => $content_post->id
             ]);
 
             return back()->withErrors([
                 'delete' => 'Failed to delete content post: ' . $e->getMessage()
             ]);
+        }
+    }
+
+    /**
+     * Process image upload
+     */
+    protected function processImage($file): string
+    {
+        try {
+            $result = $this->fileStorageService->storeImage($file);
+            return $result['path'];
+        } catch (\Exception $e) {
+            Log::error('Failed to process image', [
+                'original_name' => $file->getClientOriginalName(),
+                'error' => $e->getMessage()
+            ]);
+            throw new FileStorageException(
+                $file->getClientOriginalName(),
+                'image_processing',
+                'Failed to process image: ' . $e->getMessage(),
+                $e
+            );
+        }
+    }
+
+    /**
+     * Process media files upload
+     */
+    protected function processMediaFiles(array $files, int $contentPostId): array
+    {
+        $paths = [];
+        
+        foreach ($files as $index => $file) {
+            try {
+                $result = $this->fileStorageService->storeMediaFile($file);
+                $paths[] = $result['path'];
+                
+                // Create media record
+                ContentPostMedia::create([
+                    'content_post_id' => $contentPostId,
+                    'user_id' => Auth::id(),
+                    'file_name' => $result['filename'],
+                    'file_path' => $result['path'],
+                    'mime_type' => $result['mime_type'],
+                    'file_size' => $result['file_size'],
+                    'original_name' => $result['original_name'],
+                    'order' => $index,
+                    'is_primary' => false,
+                ]);
+                
+            } catch (\Exception $e) {
+                Log::error('Failed to process media file', [
+                    'original_name' => $file->getClientOriginalName(),
+                    'index' => $index,
+                    'error' => $e->getMessage()
+                ]);
+                
+                // Continue processing other files but log the error
+                continue;
+            }
+        }
+        
+        return $paths;
+    }
+
+    /**
+     * Remove media files
+     */
+    protected function removeMediaFiles(array $mediaIds, ContentPost $content_post): void
+    {
+        foreach ($mediaIds as $mediaId) {
+            $media = $content_post->media()->find($mediaId);
+            if ($media) {
+                // Delete file from storage
+                $this->fileStorageService->deleteFile($media->file_path);
+                
+                // Delete database record
+                $media->delete();
+            }
+        }
+    }
+
+    /**
+     * Clean up uploaded files on error
+     */
+    protected function cleanupUploadedFiles(?string $imagePath, array $mediaPaths): void
+    {
+        // Clean up main image
+        if ($imagePath) {
+            try {
+                $this->imageService->deleteImage($imagePath);
+            } catch (\Exception $e) {
+                Log::error('Failed to cleanup image', [
+                    'path' => $imagePath,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        // Clean up media files
+        foreach ($mediaPaths as $path) {
+            try {
+                $this->fileStorageService->deleteFile($path);
+            } catch (\Exception $e) {
+                Log::error('Failed to cleanup media file', [
+                    'path' => $path,
+                    'error' => $e->getMessage()
+                ]);
+            }
         }
     }
 
@@ -766,163 +474,12 @@ class ContentPostController extends Controller
         $publishedPosts = $query->where('status', 'published')->count();
         $scheduledPosts = $query->where('status', 'scheduled')->count();
         $draftPosts = $query->where('status', 'draft')->count();
-        $archivedPosts = $query->where('status', 'archived')->count();
 
-        $monthlyPosts = $query->selectRaw('COUNT(*) as total, MONTH(created_at) as month')
-            ->whereYear('created_at', date('Y'))
-            ->groupBy('month')
-            ->pluck('total', 'month');
-
-        // Get all posts and manually count platforms
-        $allPosts = $query->get();
-        $platformStats = [];
-
-        $allPlatforms = ['website', 'facebook', 'instagram', 'twitter', 'linkedin', 'tiktok', 'youtube', 'pinterest', 'email', 'other'];
-
-        foreach ($allPlatforms as $platform) {
-            $platformStats[$platform] = $allPosts->filter(function ($post) use ($platform) {
-                return in_array($platform, $post->platform ?? []);
-            })->count();
-        }
-
-        // Remove platforms with zero counts
-        $platformStats = array_filter($platformStats);
-
-        $contentTypeStats = $query->selectRaw('content_type, COUNT(*) as total')
-            ->groupBy('content_type')
-            ->pluck('total', 'content_type');
-
-        return Inertia::render('Content/Statistics', [
-            'statistics' => [
-                'total_posts' => $totalPosts,
-                'published_posts' => $publishedPosts,
-                'scheduled_posts' => $scheduledPosts,
-                'draft_posts' => $draftPosts,
-                'archived_posts' => $archivedPosts,
-                'monthly_posts' => $monthlyPosts,
-                'platform_stats' => $platformStats,
-                'content_type_stats' => $contentTypeStats,
-            ]
+        return response()->json([
+            'total_posts' => $totalPosts,
+            'published_posts' => $publishedPosts,
+            'scheduled_posts' => $scheduledPosts,
+            'draft_posts' => $draftPosts,
         ]);
-    }
-
-    /**
-     * Process media file uploads for a content post
-     */
-    protected function processMediaUploads(Request $request, ContentPost $contentPost)
-    {
-        $uploadedFiles = $request->file('media');
-        $order = 0;
-
-        foreach ($uploadedFiles as $file) {
-            try {
-                // Validate file using FileValidationService
-                $validationResult = $this->fileValidationService->validate($file, $this->determineFileType($file));
-
-                if (!$validationResult['valid']) {
-                    Log::warning('Media file validation failed', [
-                        'file' => $file->getClientOriginalName(),
-                        'errors' => $validationResult['errors'],
-                        'content_post_id' => $contentPost->id
-                    ]);
-                    continue; // Skip invalid files but continue processing others
-                }
-
-                // Check if it's an image file
-                $mimeType = $file->getMimeType();
-                $isImage = str_starts_with($mimeType, 'image/');
-
-                if ($isImage) {
-                    // Process image with ImageService
-                    $imageResult = $this->imageService->processImage(
-                        $file,
-                        'content_post_media',
-                        [
-                            'max_width' => 1920,
-                            'max_height' => 1080,
-                            'quality' => 85,
-                            'create_thumbnail' => true,
-                            'thumbnail_size' => 300,
-                        ]
-                    );
-
-                    // Create media record with processed image info
-                    ContentPostMedia::create([
-                        'content_post_id' => $contentPost->id,
-                        'user_id' => Auth::id(),
-                        'file_name' => $imageResult['filename'],
-                        'file_path' => $imageResult['path'],
-                        'mime_type' => $imageResult['mime_type'],
-                        'file_size' => $imageResult['size'],
-                        'original_name' => $imageResult['original_name'],
-                        'order' => $order++,
-                        'is_primary' => $order === 1, // First file is primary
-                    ]);
-
-                    Log::info('Media image processed and stored', [
-                        'content_post_id' => $contentPost->id,
-                        'file_name' => $imageResult['filename'],
-                        'dimensions' => $imageResult['width'] . 'x' . $imageResult['height']
-                    ]);
-                } else {
-                    // Handle non-image files (PDF, DOC, etc.) with basic storage
-                    $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
-                    $filePath = $file->storeAs('content_post_media', $fileName, 'public');
-
-                    // Create media record
-                    ContentPostMedia::create([
-                        'content_post_id' => $contentPost->id,
-                        'user_id' => Auth::id(),
-                        'file_name' => $fileName,
-                        'file_path' => $filePath,
-                        'mime_type' => $file->getMimeType(),
-                        'file_size' => $file->getSize(),
-                        'original_name' => $file->getClientOriginalName(),
-                        'order' => $order++,
-                        'is_primary' => $order === 1, // First file is primary
-                    ]);
-
-                    Log::info('Media file stored', [
-                        'content_post_id' => $contentPost->id,
-                        'file_name' => $fileName,
-                        'file_size' => $file->getSize()
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Log::error('Media file processing failed', [
-                    'error' => $e->getMessage(),
-                    'file' => $file->getClientOriginalName(),
-                    'content_post_id' => $contentPost->id
-                ]);
-
-                // Continue processing other files but log the error
-                continue;
-            }
-        }
-    }
-
-    /**
-     * Determine file type based on MIME type
-     */
-    protected function determineFileType($file): string
-    {
-        $mimeType = $file->getMimeType();
-
-        if (str_starts_with($mimeType, 'image/')) {
-            return 'image';
-        } elseif (str_starts_with($mimeType, 'video/')) {
-            return 'video';
-        } elseif ($mimeType === 'application/pdf') {
-            return 'pdf';
-        } elseif (in_array($mimeType, [
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'application/vnd.ms-excel'
-        ])) {
-            return 'xlsx';
-        } elseif ($mimeType === 'text/csv') {
-            return 'csv';
-        } else {
-            return 'file'; // fallback
-        }
     }
 }

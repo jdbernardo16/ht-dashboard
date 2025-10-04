@@ -60,12 +60,13 @@
                                 <label
                                     for="email"
                                     class="block text-sm font-medium text-gray-700"
-                                    >Email</label
+                                    >Email *</label
                                 >
                                 <input
                                     type="email"
                                     id="email"
                                     v-model="form.email"
+                                    required
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 />
                                 <p
@@ -81,12 +82,13 @@
                                 <label
                                     for="phone"
                                     class="block text-sm font-medium text-gray-700"
-                                    >Phone</label
+                                    >Phone *</label
                                 >
                                 <input
                                     type="tel"
                                     id="phone"
                                     v-model="form.phone"
+                                    required
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 />
                                 <p
@@ -102,12 +104,13 @@
                                 <label
                                     for="company"
                                     class="block text-sm font-medium text-gray-700"
-                                    >Company</label
+                                    >Company *</label
                                 >
                                 <input
                                     type="text"
                                     id="company"
                                     v-model="form.company"
+                                    required
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 />
                                 <p
@@ -118,17 +121,59 @@
                                 </p>
                             </div>
 
+                            <!-- Category -->
+                            <div>
+                                <label
+                                    for="category"
+                                    class="block text-sm font-medium text-gray-700"
+                                    >Category</label
+                                >
+                                <select
+                                    id="category"
+                                    v-model="form.category"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                >
+                                    <option value="">Select a category</option>
+                                    <option value="Consignment Partner">
+                                        Consignment Partner
+                                    </option>
+                                    <option value="Direct Buyer">
+                                        Direct Buyer
+                                    </option>
+                                    <option value="Wholesale Client">
+                                        Wholesale Client
+                                    </option>
+                                    <option value="Retail Customer">
+                                        Retail Customer
+                                    </option>
+                                    <option value="Corporate Account">
+                                        Corporate Account
+                                    </option>
+                                    <option value="Auction House">
+                                        Auction House
+                                    </option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <p
+                                    v-if="errors.category"
+                                    class="mt-1 text-sm text-red-600"
+                                >
+                                    {{ errors.category }}
+                                </p>
+                            </div>
+
                             <!-- Address -->
                             <div>
                                 <label
                                     for="address"
                                     class="block text-sm font-medium text-gray-700"
-                                    >Address</label
+                                    >Address *</label
                                 >
                                 <textarea
                                     id="address"
                                     v-model="form.address"
                                     rows="3"
+                                    required
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 ></textarea>
                                 <p
@@ -137,6 +182,28 @@
                                 >
                                     {{ errors.address }}
                                 </p>
+                            </div>
+
+                            <!-- Client Image -->
+                            <div>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 mb-2"
+                                >
+                                    Client Image
+                                </label>
+                                <ImageUploader
+                                    v-model="form.image"
+                                    label="Upload client photo"
+                                    description="Click or drag image here to upload"
+                                    accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
+                                    :max-size="5 * 1024 * 1024"
+                                    :max-width="2000"
+                                    :max-height="2000"
+                                    :min-width="100"
+                                    :min-height="100"
+                                    :error="errors.image"
+                                    :preview-url="client.profile_image_url"
+                                />
                             </div>
 
                             <!-- Submit Buttons -->
@@ -174,6 +241,7 @@
 import { ref, onMounted } from "vue";
 import { router, useForm } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import ImageUploader from "@/Components/Forms/ImageUploader.vue";
 
 const props = defineProps({
     client: {
@@ -192,6 +260,8 @@ const form = useForm({
     phone: props.client.phone || "",
     company: props.client.company || "",
     address: props.client.address || "",
+    category: props.client.category || "",
+    image: null,
 });
 
 const submitForm = () => {
@@ -223,5 +293,6 @@ onMounted(() => {
     form.phone = props.client.phone || "";
     form.company = props.client.company || "";
     form.address = props.client.address || "";
+    form.category = props.client.category || "";
 });
 </script>

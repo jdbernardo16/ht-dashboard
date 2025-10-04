@@ -9,6 +9,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\FileUploadController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -94,13 +95,21 @@ Route::middleware(['auth', 'verified'])->prefix('content')->group(function () {
     Route::get('/', [ContentPostController::class, 'index'])->name('content.web.index');
     Route::get('/create', [ContentPostController::class, 'create'])->name('content.web.create');
     Route::post('/', [ContentPostController::class, 'store'])->name('content.web.store');
-    Route::get('/{contentPost}', [ContentPostController::class, 'show'])->name('content.web.show');
-    Route::get('/{contentPost}/edit', [ContentPostController::class, 'edit'])->name('content.web.edit');
-    Route::put('/{contentPost}', [ContentPostController::class, 'update'])->name('content.web.update');
-    Route::delete('/{contentPost}', [ContentPostController::class, 'destroy'])->name('content.web.destroy');
+    Route::get('/{content_post}', [ContentPostController::class, 'show'])->name('content.web.show');
+    Route::get('/{content_post}/edit', [ContentPostController::class, 'edit'])->name('content.web.edit');
+    Route::put('/{content_post}', [ContentPostController::class, 'update'])->name('content.web.update');
+    Route::delete('/{content_post}', [ContentPostController::class, 'destroy'])->name('content.web.destroy');
 
     // Temporary file upload
     Route::post('/temporary-upload', [ContentPostController::class, 'temporaryUpload'])->name('content.temporary-upload');
+});
+
+// File Upload Routes
+Route::middleware(['auth', 'verified'])->prefix('api/upload')->group(function () {
+    Route::post('/', [FileUploadController::class, 'upload'])->name('upload.single');
+    Route::post('/multiple', [FileUploadController::class, 'uploadMultiple'])->name('upload.multiple');
+    Route::get('/config', [FileUploadController::class, 'config'])->name('upload.config');
+    Route::delete('/{file}', [FileUploadController::class, 'destroy'])->name('upload.destroy');
 });
 
 // Expenses Routes

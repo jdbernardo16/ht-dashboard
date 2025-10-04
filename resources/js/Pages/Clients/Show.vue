@@ -18,6 +18,17 @@
                                 <div class="flex items-center space-x-4 mb-6">
                                     <div class="flex-shrink-0 h-16 w-16">
                                         <div
+                                            v-if="client.profile_image_url"
+                                            class="h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden"
+                                        >
+                                            <img
+                                                :src="client.profile_image_url"
+                                                :alt="`${client.first_name} ${client.last_name}`"
+                                                class="h-full w-full object-cover"
+                                            />
+                                        </div>
+                                        <div
+                                            v-else
                                             class="h-16 w-16 rounded-full bg-indigo-600 flex items-center justify-center"
                                         >
                                             <span
@@ -71,6 +82,17 @@
                                         </h4>
                                         <p class="text-gray-900">
                                             {{ client.phone }}
+                                        </p>
+                                    </div>
+
+                                    <div v-if="client.category">
+                                        <h4
+                                            class="text-sm font-medium text-gray-500"
+                                        >
+                                            Category
+                                        </h4>
+                                        <p class="text-gray-900">
+                                            {{ client.category }}
                                         </p>
                                     </div>
 

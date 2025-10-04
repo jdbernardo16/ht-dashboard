@@ -189,7 +189,7 @@ class FileUploadControllerTest extends TestCase
             'user_id' => $this->user->id,
             'client_id' => $client->id,
             'platform' => ['website'],
-            'content_type' => 'blog',
+            'content_type' => 'article',
             'title' => 'Test Content Post',
             'status' => 'draft',
         ]);
@@ -263,7 +263,7 @@ class FileUploadControllerTest extends TestCase
             'user_id' => $this->user->id,
             'client_id' => $client->id,
             'platform' => ['website'],
-            'content_type' => 'blog',
+            'content_type' => 'article',
             'title' => 'Test Content Post',
             'status' => 'draft',
         ]);

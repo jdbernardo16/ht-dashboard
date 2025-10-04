@@ -36,4 +36,12 @@ class Expense extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Get the media files associated with the expense
+     */
+    public function media()
+    {
+        return $this->hasMany(ExpenseMedia::class);
+    }
 }

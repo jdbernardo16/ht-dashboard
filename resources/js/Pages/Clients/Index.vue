@@ -11,7 +11,8 @@
                 <!-- Search and Filter Bar -->
                 <SearchFilter
                     v-model="filters"
-                    :filters="['search']"
+                    :filters="['search', 'category', 'company']"
+                    :category-options="categoryOptions"
                     @apply="applyFilters"
                     @clear="clearFilters"
                 />
@@ -31,6 +32,17 @@
                         <div class="flex items-center">
                             <div class="flex-shrink-0 h-10 w-10">
                                 <div
+                                    v-if="item.profile_image_url"
+                                    class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden"
+                                >
+                                    <img
+                                        :src="item.profile_image_url"
+                                        :alt="`${item.first_name} ${item.last_name}`"
+                                        class="h-full w-full object-cover"
+                                    />
+                                </div>
+                                <div
+                                    v-else
                                     class="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center"
                                 >
                                     <span
@@ -125,7 +137,20 @@ const props = defineProps({
 const loading = ref(false);
 const filters = ref({
     search: props.filters.search || "",
+    category: props.filters.category || "",
+    company: props.filters.company || "",
 });
+
+// Category options for filter dropdown
+const categoryOptions = [
+    { value: "Consignment Partner", label: "Consignment Partner" },
+    { value: "Direct Buyer", label: "Direct Buyer" },
+    { value: "Wholesale Client", label: "Wholesale Client" },
+    { value: "Retail Customer", label: "Retail Customer" },
+    { value: "Corporate Account", label: "Corporate Account" },
+    { value: "Auction House", label: "Auction House" },
+    { value: "Other", label: "Other" },
+];
 
 // Computed properties
 const clients = computed(() => props.clients.data || []);
@@ -136,6 +161,7 @@ const columns = [
     { key: "email", label: "Email", sortable: true },
     { key: "phone", label: "Phone", sortable: true },
     { key: "company", label: "Company", sortable: true },
+    { key: "category", label: "Category", sortable: true },
     { key: "sales_count", label: "Sales", type: "number", sortable: true },
     {
         key: "content_posts_count",
@@ -216,6 +242,8 @@ const applyFilters = () => {
 const clearFilters = () => {
     filters.value = {
         search: "",
+        category: "",
+        company: "",
     };
     applyFilters();
 };

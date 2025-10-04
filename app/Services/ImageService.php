@@ -297,6 +297,52 @@ class ImageService
     }
 
     /**
+     * Create thumbnail from existing image file
+     *
+     * @param string $imagePath
+     * @param string $thumbnailPath
+     * @param int $width
+     * @param int $height
+     * @return bool
+     */
+    public function createThumbnailFromFile(string $imagePath, string $thumbnailPath, int $width = 300, int $height = 300): bool
+    {
+        try {
+            if (!Storage::disk('public')->exists($imagePath)) {
+                Log::warning('Image file not found for thumbnail creation', ['path' => $imagePath]);
+                return false;
+            }
+
+            // Read the image file
+            $file = Storage::disk('public')->get($imagePath);
+            $image = $this->imageManager->read($file);
+            
+            // Create thumbnail
+            $thumbnail = clone $image;
+            $thumbnail->scale(width: $width, height: $height);
+            
+            // Save thumbnail
+            Storage::disk('public')->put($thumbnailPath, $thumbnail->toJpeg(80)->toFilePointer());
+            
+            Log::info('Thumbnail created successfully', [
+                'original_path' => $imagePath,
+                'thumbnail_path' => $thumbnailPath,
+                'dimensions' => $width . 'x' . $height
+            ]);
+            
+            return true;
+            
+        } catch (Exception $e) {
+            Log::error('Thumbnail creation from file failed', [
+                'error' => $e->getMessage(),
+                'image_path' => $imagePath,
+                'thumbnail_path' => $thumbnailPath
+            ]);
+            return false;
+        }
+    }
+
+    /**
      * Optimize existing image
      *
      * @param string $path

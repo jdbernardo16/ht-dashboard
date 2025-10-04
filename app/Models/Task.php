@@ -65,4 +65,11 @@ class Task extends Model
     {
         return $this->hasOne(TaskMedia::class)->where('is_primary', true);
     }
+    /**
+     * Get the related goal for this task
+     */
+    public function goal()
+    {
+        return $this->belongsTo(Goal::class, 'related_goal_id');
+    }
 }

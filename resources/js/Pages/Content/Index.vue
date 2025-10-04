@@ -38,11 +38,11 @@
                     <template #image="{ item }">
                         <div class="flex justify-center">
                             <div
-                                v-if="item.image"
+                                v-if="item.image_url"
                                 class="w-12 h-12 rounded-lg overflow-hidden border border-gray-200"
                             >
                                 <img
-                                    :src="item.image"
+                                    :src="item.image_url"
                                     :alt="item.title"
                                     class="w-full h-full object-cover"
                                     @error="handleImageError"
@@ -193,6 +193,7 @@ const columns = [
     { key: "title", label: "Title", sortable: true },
     { key: "platform", label: "Platforms", sortable: true },
     { key: "content_type", label: "Type", sortable: true },
+    { key: "content_category", label: "Category", sortable: true },
     { key: "status", label: "Status", sortable: true },
     { key: "scheduled_date", label: "Scheduled", type: "date", sortable: true },
     { key: "user", label: "Author", sortable: true },

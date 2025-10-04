@@ -1,241 +1,201 @@
-# Technology Stack
+# Hidden Treasures Dashboard - Technology Stack
 
 ## Backend Technologies
 
-### Laravel Framework
+### Core Framework
+- **Laravel 12.x**: Modern PHP framework with elegant syntax and powerful features
+- **PHP 8.2+**: Latest stable PHP version with improved performance and features
 
--   **Version**: 12.x
--   **PHP Requirement**: 8.2+
--   **Purpose**: Primary backend framework providing MVC architecture, routing, ORM, and authentication
--   **Key Packages**:
-    -   Laravel Sanctum: API authentication
-    -   Laravel Breeze: Authentication scaffolding
-    -   Intervention Image: Image processing
-    -   Inertia.js: Server-side rendering for Vue.js frontend
+### Authentication & Security
+- **Laravel Sanctum**: API authentication and token management
+- **Bcrypt**: Secure password hashing
+- **CSRF Protection**: Cross-site request forgery prevention
+- **Input Validation**: Request validation with custom rules
 
 ### Database
+- **MySQL**: Production database (Hostinger hosting)
+- **SQLite**: Development database for local development
+- **Eloquent ORM**: Powerful ActiveRecord implementation
+- **Database Migrations**: Version control for database schema
+- **Database Seeders**: Test data generation
 
--   **Development**: SQLite for quick setup and development
--   **Production**: MySQL recommended for production deployment
--   **ORM**: Eloquent ORM with relationships, migrations, and seeding
--   **Key Features**:
-    -   Database migrations for version control
-    -   Model factories for testing
-    -   Seeders for initial data setup
+### File Processing
+- **Intervention Image**: Image manipulation and processing
+- **File Upload System**: Custom file upload with validation
+- **Media Management**: Organized file storage with metadata
 
-### Authentication & Authorization
-
--   **Laravel Sanctum**: API token authentication
--   **Role-Based Access Control**: Custom middleware for Admin, Manager, and VA roles
--   **Policies**: Gate policies for resource authorization
--   **Session Management**: Laravel's built-in session handling
+### Development Tools
+- **Laravel Boost**: Development productivity tools
+- **Laravel Pail**: Advanced logging
+- **Laravel Pint**: Code style fixing
+- **PHPUnit**: Unit and feature testing
+- **Laravel Tinker**: Interactive REPL
 
 ## Frontend Technologies
 
-### Vue.js
+### Core Framework
+- **Vue.js 3**: Progressive JavaScript framework with Composition API
+- **Inertia.js**: Modern monolithic SPA without building an API
+- **Vite**: Fast build tool and development server
 
--   **Version**: 3.4+
--   **Purpose**: Reactive frontend framework for building user interfaces
--   **Key Features**:
-    -   Composition API for component logic
-    -   Reactive data binding
-    -   Component-based architecture
+### UI & Styling
+- **Tailwind CSS**: Utility-first CSS framework
+- **@tailwindcss/forms**: Form styling utilities
+- **@tailwindcss/vite**: Vite integration for Tailwind
+- **Custom Design System**: Consistent color palette and spacing
 
-### Inertia.js
+### Data Visualization
+- **Chart.js 4.5**: Charting library for data visualization
+- **vue-chartjs 5.3**: Vue.js wrapper for Chart.js
+- **Custom Chart Components**: Reusable chart components
 
--   **Version**: 2.x
--   **Purpose**: Bridge between Laravel backend and Vue.js frontend
--   **Benefits**:
-    -   Single-page application feel without building an API
-    -   Server-side rendering for SEO
-    -   Automatic code splitting
-    -   Seamless data passing between backend and frontend
+### Build Tools
+- **Vite 7.0**: Fast build tool with HMR
+- **@vitejs/plugin-vue**: Official Vue.js plugin for Vite
+- **laravel-vite-plugin**: Laravel integration for Vite
 
-### Chart.js & Vue Chart.js
-
--   **Version**: Chart.js 4.5+, Vue Chart.js 5.3+
--   **Purpose**: Data visualization for dashboard metrics
--   **Features**:
-    -   Responsive charts
-    -   Multiple chart types (pie, bar, line, etc.)
-    -   Real-time data updates
-
-### Tailwind CSS
-
--   **Version**: 3.x
--   **Purpose**: Utility-first CSS framework for styling
--   **Benefits**:
-    -   Rapid UI development
-    -   Consistent design system
-    -   Responsive design out of the box
-    -   Customizable via configuration
-
-### Vite
-
--   **Version**: 7.x
--   **Purpose**: Build tool and development server
--   **Features**:
-    -   Fast hot module replacement (HMR)
-    -   Optimized production builds
-    -   ES module support
-    -   Plugin system
-
-## Development Tools
-
-### Composer
-
--   **Purpose**: PHP dependency management
--   **Key Scripts**:
-    -   `composer install`: Install dependencies
-    -   `composer update`: Update dependencies
-    -   `composer dump-autoload`: Regenerate autoload files
-
-### NPM
-
--   **Purpose**: Node.js package management
--   **Key Scripts**:
-    -   `npm run dev`: Development server with HMR
-    -   `npm run build`: Production build
-    -   `npm run prod`: Production build with optimizations
-
-### Laravel Artisan
-
--   **Purpose**: Command-line interface for Laravel
--   **Common Commands**:
-    -   `php artisan serve`: Start development server
-    -   `php artisan migrate`: Run database migrations
-    -   `php artisan db:seed`: Seed database with test data
-    -   `php artisan test`: Run tests
-    -   `php artisan make:controller`: Generate new controller
-    -   `php artisan make:model`: Generate new model
-
-### Git
-
--   **Purpose**: Version control system
--   **Branching Strategy**: Feature branching with main/master as stable branch
--   **Key Files**:
-    -   `.gitignore`: Excludes node_modules, .env, and other sensitive files
-    -   `.gitattributes`: Configures Git attributes
+### Additional Libraries
+- **clsx**: Utility for constructing className strings
+- **tailwind-merge**: Utility for merging Tailwind CSS classes
+- **Ziggy**: Laravel route helper for JavaScript
 
 ## Development Environment
 
 ### Local Development
+- **Laravel Sail**: Docker development environment
+- **Laravel Valet**: macOS development environment
+- **SQLite**: Lightweight database for local development
+- **Hot Module Replacement**: Instant frontend updates
 
--   **Requirements**:
-    -   PHP 8.2+
-    -   Composer
-    -   Node.js 18.x+
-    -   NPM or Yarn
-    -   SQLite (for development)
+### Package Management
+- **Composer**: PHP dependency management
+- **NPM**: Node.js package management
+- **Composer Scripts**: Custom development commands
 
-### Environment Configuration
+## Deployment Infrastructure
 
--   **Environment File**: `.env` (copied from `.env.example`)
--   **Key Variables**:
-    -   `APP_NAME`: Application name
-    -   `APP_ENV`: Environment (local/production)
-    -   `APP_KEY`: Application encryption key
-    -   `DB_CONNECTION`: Database connection type
-    -   `DB_DATABASE`: Database name
-    -   `APP_URL`: Application URL
+### Production Hosting
+- **Hostinger**: Shared hosting environment
+- **MySQL Database**: Production database server
+- **SSL Certificate**: HTTPS encryption
+- **Cron Jobs**: Scheduled task execution
 
-### Development Workflow
+### Build Process
+- **Asset Compilation**: Optimized CSS and JavaScript
+- **SSR Support**: Server-side rendering for Vue.js
+- **Environment Configuration**: Production-specific settings
 
-1. **Setup**:
+## Code Quality Tools
 
-    ```bash
-    composer install
-    npm install
-    cp .env.example .env
-    php artisan key:generate
-    php artisan migrate
-    php artisan db:seed
-    ```
+### PHP Code Quality
+- **Laravel Pint**: Code style fixing and formatting
+- **PSR-12**: PHP coding standards
+- **Type Declarations**: Strict typing where possible
 
-2. **Development**:
+### JavaScript Code Quality
+- **ESLint**: JavaScript linting (potential future addition)
+- **Prettier**: Code formatting (potential future addition)
 
-    ```bash
-    # Start development server
-    php artisan serve
+### Testing
+- **PHPUnit**: Unit and feature testing
+- **Laravel Dusk**: Browser testing (potential future addition)
+- **Test Factories**: Database test data generation
 
-    # Start Vite development server (in separate terminal)
-    npm run dev
-    ```
+## Performance Optimization
 
-3. **Testing**:
+### Backend Optimization
+- **Database Indexing**: Optimized query performance
+- **Eager Loading**: Prevent N+1 query problems
+- **Query Caching**: Database query caching
+- **Response Caching**: HTTP response caching
 
-    ```bash
-    # Run all tests
-    php artisan test
+### Frontend Optimization
+- **Code Splitting**: Lazy loading of components
+- **Asset Minification**: Compressed CSS and JavaScript
+- **Image Optimization**: Responsive image loading
+- **Tree Shaking**: Unused code elimination
 
-    # Run specific test
-    php artisan test tests/Feature/AuthTest.php
-    ```
+## Security Measures
 
-4. **Building for Production**:
-    ```bash
-    npm run build
-    php artisan config:cache
-    php artisan route:cache
-    php artisan view:cache
-    ```
+### Authentication Security
+- **Token-Based Authentication**: Laravel Sanctum tokens
+- **Session Security**: Secure session management
+- **Password Policies**: Strong password requirements
 
-## Technical Constraints
+### Data Security
+- **Input Sanitization**: Clean and validate user input
+- **SQL Injection Prevention**: Parameterized queries
+- **XSS Prevention**: Output escaping
+- **CSRF Protection**: Token-based request validation
 
-### Performance Considerations
+### File Security
+- **File Validation**: MIME type and size validation
+- **Secure Storage**: Protected file storage
+- **Access Control**: File access permissions
 
--   **Database Indexing**: Proper indexing on frequently queried columns
--   **Query Optimization**: Use of Eloquent relationships and eager loading
--   **Asset Optimization**: Vite handles code splitting and minification
--   **Caching**: Laravel's caching system for frequently accessed data
+## Monitoring & Logging
 
-### Security Considerations
+### Application Logging
+- **Laravel Log**: Application event logging
+- **Laravel Pail**: Advanced logging with filtering
+- **Error Tracking**: Exception monitoring
+- **Performance Monitoring**: Request/response timing
 
--   **Authentication**: Laravel Sanctum for API authentication
--   **Authorization**: Role-based access control with custom middleware
--   **Input Validation**: Laravel's validation system for form inputs
--   **CSRF Protection**: Built-in CSRF token verification
--   **SQL Injection Prevention**: Eloquent ORM uses parameterized queries
+### Debugging Tools
+- **Laravel Telescope**: Application debugging (potential future)
+- **Clockwork**: Development toolbar (potential future)
+- **Laravel Debugbar**: Debug information panel
 
-### Scalability Considerations
+## API Integration
 
--   **Database**: Designed to work with both SQLite (development) and MySQL (production)
--   **File Storage**: Laravel's filesystem abstraction for different storage backends
--   **Queue System**: Laravel queues for handling background jobs
--   **Caching**: Multiple cache drivers supported (file, database, Redis)
+### External APIs (Planned)
+- **eBay Finding API**: Comparable sales data
+- **CardLadder API**: Sports card pricing data
+- **Shopify API**: Order and inventory synchronization
 
-## Deployment Considerations
+### Internal API
+- **RESTful Endpoints**: Standardized API structure
+- **Resource Controllers**: Consistent API patterns
+- **API Documentation**: Comprehensive API documentation
 
-### Production Environment
+## Version Control
 
--   **Web Server**: Apache or Nginx
--   **PHP Version**: 8.2+
--   **Database**: MySQL 5.7+ or MariaDB 10.2+
--   **SSL**: HTTPS required for production
--   **File Permissions**: Proper permissions for storage and bootstrap/cache directories
+### Git Workflow
+- **Git**: Version control system
+- **Feature Branching**: Isolated feature development
+- **Pull Requests**: Code review process
+- **Semantic Versioning**: Consistent version numbering
 
-### Environment Variables for Production
+### Code Repository
+- **Git Repository**: Source code management
+- **Documentation**: README and inline documentation
+- **Changelog**: Version change documentation
 
-```env
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://your-domain.com
+## Development Workflow
 
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=your_database
-DB_USERNAME=your_username
-DB_PASSWORD=your_password
-```
+### Environment Setup
+- **Local Development**: Complete local environment
+- **Staging Environment**: Pre-production testing
+- **Production Environment**: Live application
 
 ### Deployment Process
+- **Automated Builds**: CI/CD pipeline (potential future)
+- **Zero Downtime**: Seamless deployment
+- **Rollback Capability**: Quick rollback to previous versions
 
-1. **Code Deployment**: Pull latest code from repository
-2. **Dependencies**: Install PHP and Node.js dependencies
-3. **Environment**: Configure production environment variables
-4. **Database**: Run migrations and seeders if needed
-5. **Assets**: Build frontend assets
-6. **Cache**: Clear and cache configuration, routes, and views
-7. **Permissions**: Set proper file permissions
-8. **Services**: Restart web server and queue workers
+## Future Technology Considerations
+
+### Scalability
+- **Redis**: Caching and session storage
+- **Queue System**: Background job processing
+- **Load Balancing**: Traffic distribution
+
+### AI Integration
+- **OpenAI API**: AI-powered features
+- **Computer Vision**: Image recognition
+- **Natural Language Processing**: Text analysis
+
+### Advanced Features
+- **WebSocket**: Real-time communication
+- **Elasticsearch**: Advanced search capabilities
+- **Microservices**: Service-oriented architecture

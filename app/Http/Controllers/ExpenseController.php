@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Expense;
+use App\Models\ExpenseMedia;
+use App\Services\FileStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -17,7 +19,7 @@ class ExpenseController extends Controller
     {
         Gate::authorize('viewAny', Expense::class);
 
-        $query = Expense::with(['user']);
+        $query = Expense::with(['user', 'media']);
 
         // Apply filters
         if ($request->has('search')) {
@@ -80,6 +82,17 @@ class ExpenseController extends Controller
                     'name' => $expense->user->first_name . ' ' . $expense->user->last_name,
                     'email' => $expense->user->email,
                 ] : null,
+                'media' => $expense->media->map(function ($media) {
+                    return [
+                        'id' => $media->id,
+                        'url' => $media->url,
+                        'file_name' => $media->file_name,
+                        'original_name' => $media->original_name,
+                        'mime_type' => $media->mime_type,
+                        'file_size' => $media->file_size,
+                        'formatted_size' => $media->formatted_size,
+                    ];
+                }),
                 'created_at' => $expense->created_at,
                 'updated_at' => $expense->updated_at,
             ];
@@ -119,11 +132,44 @@ class ExpenseController extends Controller
             'receipt_number' => 'nullable|string|max:255',
             'tax_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
+            'receipts' => 'nullable|array',
+            'receipts.*' => 'file|mimes:jpg,jpeg,png,pdf,webp|max:10240', // 10MB max
         ]);
 
         $validated['user_id'] = Auth::id();
 
         $expense = Expense::create($validated);
+
+        // Handle receipt uploads
+        if ($request->hasFile('receipts')) {
+            $fileStorageService = app(FileStorageService::class);
+            
+            foreach ($request->file('receipts') as $receipt) {
+                try {
+                    $fileData = $fileStorageService->storeMediaFile($receipt);
+                    
+                    ExpenseMedia::create([
+                        'expense_id' => $expense->id,
+                        'user_id' => Auth::id(),
+                        'file_name' => $fileData['filename'],
+                        'file_path' => $fileData['path'],
+                        'mime_type' => $fileData['mime_type'],
+                        'file_size' => $fileData['file_size'],
+                        'original_name' => $fileData['original_name'],
+                        'description' => 'Receipt for expense',
+                        'order' => 0,
+                        'is_primary' => false,
+                    ]);
+                } catch (\Exception $e) {
+                    // Log error but don't fail the entire expense creation
+                    \Illuminate\Support\Facades\Log::error('Failed to upload receipt for expense', [
+                        'expense_id' => $expense->id,
+                        'file_name' => $receipt->getClientOriginalName(),
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+        }
 
         return redirect()->route('expenses.index')
             ->with('success', 'Expense created successfully');
@@ -137,7 +183,7 @@ class ExpenseController extends Controller
         Gate::authorize('view', $expense);
 
         return Inertia::render('Expenses/Show', [
-            'expense' => $expense->load(['user'])
+            'expense' => $expense->load(['user', 'media'])
         ]);
     }
 
@@ -149,7 +195,7 @@ class ExpenseController extends Controller
         Gate::authorize('update', $expense);
 
         return Inertia::render('Expenses/Edit', [
-            'expense' => $expense->load(['user'])
+            'expense' => $expense->load(['user', 'media'])
         ]);
     }
 
@@ -171,10 +217,43 @@ class ExpenseController extends Controller
             'receipt_number' => 'nullable|string|max:255',
             'tax_amount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
+            'receipts' => 'nullable|array',
+            'receipts.*' => 'file|mimes:jpg,jpeg,png,pdf,webp|max:10240', // 10MB max
         ]);
 
         $oldStatus = $expense->status;
         $expense->update($validated);
+
+        // Handle receipt uploads
+        if ($request->hasFile('receipts')) {
+            $fileStorageService = app(FileStorageService::class);
+            
+            foreach ($request->file('receipts') as $receipt) {
+                try {
+                    $fileData = $fileStorageService->storeMediaFile($receipt);
+                    
+                    ExpenseMedia::create([
+                        'expense_id' => $expense->id,
+                        'user_id' => Auth::id(),
+                        'file_name' => $fileData['filename'],
+                        'file_path' => $fileData['path'],
+                        'mime_type' => $fileData['mime_type'],
+                        'file_size' => $fileData['file_size'],
+                        'original_name' => $fileData['original_name'],
+                        'description' => 'Receipt for expense',
+                        'order' => 0,
+                        'is_primary' => false,
+                    ]);
+                } catch (\Exception $e) {
+                    // Log error but don't fail the entire expense update
+                    \Illuminate\Support\Facades\Log::error('Failed to upload receipt for expense', [
+                        'expense_id' => $expense->id,
+                        'file_name' => $receipt->getClientOriginalName(),
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+        }
 
         // Send notification if status changed to paid (approved)
         if ($oldStatus !== 'paid' && $expense->status === 'paid') {

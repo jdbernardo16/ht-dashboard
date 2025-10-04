@@ -287,6 +287,28 @@
                                 </p>
                             </div>
 
+                            <!-- Receipt Upload -->
+                            <div>
+                                <label
+                                    class="block text-sm font-medium text-gray-700 mb-2"
+                                >
+                                    Receipts (Optional)
+                                </label>
+                                <ImageUploader
+                                    v-model="form.receipts"
+                                    :multiple="true"
+                                    accept="image/*,.pdf"
+                                    :max-size="10 * 1024 * 1024"
+                                    label="Upload receipts"
+                                    description="Drag & drop receipt images or PDFs here, or click to browse"
+                                    :error="form.errors.receipts"
+                                />
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Supported formats: JPG, PNG, WebP, PDF (Max
+                                    10MB each)
+                                </p>
+                            </div>
+
                             <!-- Submit Buttons -->
                             <div
                                 class="flex items-center justify-end space-x-3"
@@ -321,6 +343,7 @@
 <script setup>
 import { useForm } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import ImageUploader from "@/Components/Forms/ImageUploader.vue";
 
 const form = useForm({
     title: "",
@@ -334,6 +357,7 @@ const form = useForm({
     receipt_number: "",
     tax_amount: 0,
     notes: "",
+    receipts: [],
 });
 
 const submitForm = () => {
