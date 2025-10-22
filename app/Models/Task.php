@@ -72,4 +72,22 @@ class Task extends Model
     {
         return $this->belongsTo(Goal::class, 'related_goal_id');
     }
+
+    /**
+     * Automatically set completed_at when status changes to 'completed'
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Task $task) {
+            // Check if status is being changed to 'completed'
+            if ($task->isDirty('status') && $task->status === 'completed' && !$task->completed_at) {
+                $task->completed_at = now();
+            }
+            
+            // Clear completed_at if status is changed from 'completed' to something else
+            if ($task->isDirty('status') && $task->status !== 'completed' && $task->completed_at) {
+                $task->completed_at = null;
+            }
+        });
+    }
 }

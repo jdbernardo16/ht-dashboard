@@ -1,0 +1,550 @@
+/* Email Preferences Styles */
+
+.email-preferences-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.email-preferences-header {
+    margin-bottom: 32px;
+}
+
+.email-preferences-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+.email-preferences-description {
+    font-size: 16px;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+.email-preferences-card {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.email-preferences-card-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+
+.email-preferences-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 4px;
+}
+
+.email-preferences-card-description {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.email-preferences-card-content {
+    padding: 24px;
+}
+
+/* Master Toggle */
+.master-toggle-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    background-color: #f0f9ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.master-toggle-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.master-toggle-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e40af;
+}
+
+.master-toggle-description {
+    font-size: 14px;
+    color: #1e40af;
+    opacity: 0.8;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #d1d5db;
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .toggle-slider {
+    background-color: #3b82f6;
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+
+.toggle-switch.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.toggle-switch.disabled .toggle-slider {
+    cursor: not-allowed;
+}
+
+/* Preference Items */
+.preference-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.preference-item:last-child {
+    border-bottom: none;
+}
+
+.preference-content {
+    flex: 1;
+    margin-right: 16px;
+}
+
+.preference-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: #111827;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preference-icon {
+    width: 20px;
+    height: 20px;
+    color: #6b7280;
+}
+
+.preference-description {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+.preference-toggle {
+    flex-shrink: 0;
+}
+
+/* Notification Type Icons */
+.notification-type-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 12px;
+}
+
+.notification-type-icon.tasks {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.notification-type-icon.sales {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.notification-type-icon.expenses {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.notification-type-icon.goals {
+    background-color: #e9d5ff;
+    color: #6b21a8;
+}
+
+.notification-type-icon.content {
+    background-color: #ede9fe;
+    color: #5b21b6;
+}
+
+/* Action Buttons */
+.email-preferences-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 32px;
+}
+
+.btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2563eb;
+}
+
+.btn-secondary {
+    background-color: white;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+}
+
+.btn-secondary:hover {
+    background-color: #f9fafb;
+    color: #374151;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Status Messages */
+.status-message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-message.success {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.status-message.error {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.status-message.info {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+
+.status-message-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+}
+
+.status-message-content {
+    flex: 1;
+}
+
+.status-message-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.status-message-text {
+    font-size: 14px;
+}
+
+/* Loading State */
+.loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 12px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-text {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+/* Profile Section Integration */
+.profile-email-preferences {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.profile-preferences-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.profile-preferences-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.profile-preferences-link {
+    color: #3b82f6;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.profile-preferences-link:hover {
+    color: #2563eb;
+    text-decoration: underline;
+}
+
+.profile-preferences-summary {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background-color: #f9fafb;
+    border-radius: 8px;
+}
+
+.preference-summary-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preference-summary-label {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.preference-summary-value {
+    font-size: 14px;
+    font-weight: 500;
+    color: #111827;
+}
+
+.preference-summary-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.preference-summary-status.enabled {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.preference-summary-status.disabled {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+    .email-preferences-container {
+        padding: 16px;
+    }
+
+    .preference-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .preference-toggle {
+        align-self: flex-end;
+    }
+
+    .email-preferences-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .profile-preferences-summary {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+}
+
+/* Animation for preference changes */
+.preference-item.updating {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.preference-item.updated {
+    animation: highlight-success 1s ease-out;
+}
+
+@keyframes highlight-success {
+    0% {
+        background-color: #d1fae5;
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+/* Email Settings Navigation Link */
+.email-settings-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: #6b7280;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.email-settings-nav-link:hover {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+.email-settings-nav-link.active {
+    background-color: #eff6ff;
+    color: #3b82f6;
+}
+
+.email-settings-nav-icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* Accessibility */
+.toggle-switch:focus-within .toggle-slider {
+    box-shadow: 0 0 0 2px #3b82f6;
+}
+
+.btn:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+.preference-item:focus-within {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+    .email-preferences-card {
+        background-color: #1f2937;
+        border-color: #374151;
+    }
+
+    .email-preferences-card-header {
+        background-color: #374151;
+        border-color: #4b5563;
+    }
+
+    .preference-title {
+        color: #f9fafb;
+    }
+
+    .preference-description {
+        color: #d1d5db;
+    }
+
+    .master-toggle-section {
+        background-color: #1e3a8a;
+        border-color: #3b82f6;
+    }
+
+    .toggle-slider {
+        background-color: #4b5563;
+    }
+}

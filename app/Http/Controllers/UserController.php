@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Traits\AdministrativeAlertsTrait;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
+    use AdministrativeAlertsTrait;
     /**
      * Display a listing of the resource.
      */
@@ -47,7 +49,28 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
         ]);
 
+        // Get the original values before update
+        $originalValues = $user->only(['name', 'email', 'role', 'status']);
+        
         $user->update($validated);
+        
+        // Check if an admin account was modified
+        if ($user->isAdmin() || $user->getOriginal('role') === 'admin') {
+            $changes = [];
+            
+            foreach ($originalValues as $key => $originalValue) {
+                if ($user->$key !== $originalValue) {
+                    $changes[$key] = [
+                        'old' => $originalValue,
+                        'new' => $user->$key
+                    ];
+                }
+            }
+            
+            if (!empty($changes)) {
+                $this->triggerAdminAccountModifiedAlert($user, $changes);
+            }
+        }
 
         return response()->json([
             'data' => $user->only(['id', 'name', 'email']),
@@ -60,7 +83,32 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
+        // Check if this is an admin account being deleted
+        $isAdmin = $user->isAdmin();
+        
+        // Store user info before deletion
+        $userInfo = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role,
+            'created_at' => $user->created_at,
+        ];
+        
         $user->delete();
+        
+        // Trigger user deletion alert
+        if ($isAdmin) {
+            $this->triggerUserAccountDeletedAlert(
+                (object) $userInfo,
+                'Admin account deleted by ' . auth()->user()->name
+            );
+        } else {
+            $this->triggerUserAccountDeletedAlert(
+                (object) $userInfo,
+                'User account deleted by ' . auth()->user()->name
+            );
+        }
 
         return response()->json([
             'message' => 'User deleted successfully'

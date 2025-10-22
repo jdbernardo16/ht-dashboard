@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\ClientMedia;
 use App\Services\FileStorageService;
 use App\Services\ImageService;
+use App\Traits\AdministrativeAlertsTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -15,6 +16,7 @@ use Inertia\Inertia;
 
 class ClientController extends Controller
 {
+    use AdministrativeAlertsTrait;
     protected $fileStorageService;
     protected $imageService;
 
@@ -145,7 +147,35 @@ class ClientController extends Controller
     {
         Gate::authorize('delete', $client);
 
+        // Store client info before deletion for alert
+        $clientInfo = [
+            'id' => $client->id,
+            'name' => $client->full_name,
+            'email' => $client->email,
+            'company' => $client->company,
+            'category' => $client->category,
+            'created_at' => $client->created_at,
+        ];
+
+        // Check if client has significant data
+        $salesCount = $client->sales()->count();
+        $contentCount = $client->contentPosts()->count();
+        $isSignificant = $salesCount > 0 || $contentCount > 0;
+
         $client->delete();
+
+        // Trigger client deletion alert
+        $this->triggerClientDeletedAlert(
+            (object) $clientInfo,
+            'Client deleted by ' . auth()->user()->name,
+            [
+                'sales_count' => $salesCount,
+                'content_count' => $contentCount,
+                'was_significant' => $isSignificant,
+                'category' => $client->category,
+                'company' => $client->company,
+            ]
+        );
 
         return redirect()->route('clients.web.index')
             ->with('success', 'Client deleted successfully');

@@ -202,21 +202,35 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { router } from "@inertiajs/vue3";
+import { onMounted, onUnmounted, ref, watch } from "vue";
+import { useNotifications } from "../../Composables/useNotifications.js";
 import { createApiHeaders } from "../../Utils/utils.js";
 
+// Props
+const props = defineProps({
+    user: {
+        type: Object,
+        required: true,
+    },
+});
 const showNotifications = ref(false);
-const notifications = ref([]);
-const unreadCount = ref(0);
 const loading = ref(false);
 const error = ref(null);
 const markingAllAsRead = ref(false);
 const markingRead = ref(new Set());
 const deleting = ref(new Set());
 
-// Polling interval
-let pollingInterval = null;
+// Use our real-time notifications composable
+const {
+    notifications,
+    unreadCount,
+    connectToNotifications,
+    disconnectFromNotifications,
+    requestNotificationPermission,
+    markAsRead: markAsReadRealtime,
+    markAllAsRead: markAllAsReadRealtime,
+    setNotifications,
+} = useNotifications();
 
 const fetchNotifications = async () => {
     try {
@@ -270,15 +284,8 @@ const markAsRead = async (notification) => {
         });
 
         if (response.ok) {
-            // Update local state
-            const index = notifications.value.findIndex(
-                (n) => n.id === notification.id
-            );
-            if (index !== -1) {
-                notifications.value[index].is_unread = false;
-                notifications.value[index].read_at = new Date().toISOString();
-            }
-            unreadCount.value = Math.max(0, unreadCount.value - 1);
+            // Use real-time composable to update state
+            markAsReadRealtime(notification.id);
         }
     } catch (err) {
         console.error("Error marking notification as read:", err);
@@ -297,12 +304,8 @@ const markAllAsRead = async () => {
         });
 
         if (response.ok) {
-            // Update all notifications to read
-            notifications.value.forEach((notification) => {
-                notification.is_unread = false;
-                notification.read_at = new Date().toISOString();
-            });
-            unreadCount.value = 0;
+            // Use real-time composable to update state
+            markAllAsReadRealtime();
         }
     } catch (err) {
         console.error("Error marking all notifications as read:", err);
@@ -391,16 +394,37 @@ const formatTimeAgo = (dateString) => {
     return date.toLocaleDateString();
 };
 
-// Start polling for unread count
-onMounted(() => {
-    fetchUnreadCount();
-    pollingInterval = setInterval(fetchUnreadCount, 30000); // Poll every 30 seconds
+// Initialize real-time notifications
+onMounted(async () => {
+    // Request notification permission for browser notifications
+    await requestNotificationPermission();
+
+    // Connect to real-time notifications for the current user
+    if (props.user?.id) {
+        connectToNotifications(props.user.id);
+    }
+
+    // Fetch initial notifications
+    fetchNotifications();
 });
 
-// Clean up polling
+// Watch for user changes and reconnect if needed
+watch(
+    () => props.user?.id,
+    (newUserId, oldUserId) => {
+        if (oldUserId) {
+            disconnectFromNotifications(oldUserId);
+        }
+        if (newUserId) {
+            connectToNotifications(newUserId);
+        }
+    }
+);
+
+// Clean up real-time connection
 onUnmounted(() => {
-    if (pollingInterval) {
-        clearInterval(pollingInterval);
+    if (props.user?.id) {
+        disconnectFromNotifications(props.user.id);
     }
 });
 

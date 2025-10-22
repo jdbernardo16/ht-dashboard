@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ContentPostMedia;
 use App\Services\FileStorageService;
+use App\Traits\AdministrativeAlertsTrait;
 use App\Rules\ValidFileType;
 use App\Rules\ValidImageDimensions;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ use Illuminate\Validation\Rule;
 
 class FileUploadController extends Controller
 {
+    use AdministrativeAlertsTrait;
     protected $fileStorageService;
 
     public function __construct(FileStorageService $fileStorageService)
@@ -67,6 +69,18 @@ class FileUploadController extends Controller
                 'file' => $fileName,
                 'type' => $type ?? 'unknown'
             ]);
+
+            // Trigger file upload failure alert
+            $this->triggerFileUploadFailureAlert(
+                $fileName,
+                $e->getMessage(),
+                [
+                    'file_type' => $type ?? 'unknown',
+                    'file_size' => $request->file('file')?->getSize(),
+                    'max_size' => $maxSize ?? 'not specified',
+                    'user_id' => auth()->id(),
+                ]
+            );
 
             return response()->json([
                 'success' => false,
@@ -197,6 +211,20 @@ class FileUploadController extends Controller
                         'file' => $file->getClientOriginalName(),
                         'error' => $e->getMessage()
                     ];
+                    
+                    // Trigger file upload failure alert for each failed file
+                    $this->triggerFileUploadFailureAlert(
+                        $file->getClientOriginalName(),
+                        $e->getMessage(),
+                        [
+                            'file_type' => $type ?? 'unknown',
+                            'file_size' => $file->getSize(),
+                            'max_size' => $maxSize ?? 'not specified',
+                            'user_id' => auth()->id(),
+                            'batch_upload' => true,
+                            'batch_index' => $index,
+                        ]
+                    );
                 }
             }
 
@@ -278,6 +306,18 @@ class FileUploadController extends Controller
                 'error' => $e->getMessage()
             ]);
             
+            // Trigger file upload failure alert for processing errors
+            $this->triggerFileUploadFailureAlert(
+                $file->getClientOriginalName(),
+                "File processing failed: {$e->getMessage()}",
+                [
+                    'file_type' => $type,
+                    'file_size' => $file->getSize(),
+                    'processing_stage' => 'process_file',
+                    'user_id' => auth()->id(),
+                ]
+            );
+            
             throw new \Exception("Failed to process file: {$e->getMessage()}");
         }
     }
@@ -333,6 +373,17 @@ class FileUploadController extends Controller
                 'error' => $e->getMessage(),
                 'file' => $file
             ]);
+
+            // Trigger file upload failure alert for deletion errors
+            $this->triggerFileUploadFailureAlert(
+                $file,
+                "File deletion failed: {$e->getMessage()}",
+                [
+                    'operation' => 'delete',
+                    'user_id' => auth()->id(),
+                    'media_id' => $media->id ?? null,
+                ]
+            );
 
             return response()->json([
                 'success' => false,

@@ -10,6 +10,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\FileUploadController;
+use App\Http\Controllers\TestAlertController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -167,6 +168,28 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->group(functio
     // Use DashboardController so the Admin dashboard page receives the same
     // Inertia props ('dashboardData' and 'lastUpdated') as the main dashboard.
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('admin.dashboard');
+    
+    // Test Alert System Routes (Admin only)
+    Route::prefix('test-alerts')->group(function () {
+        Route::get('/', [TestAlertController::class, 'index'])->name('admin.test-alerts.index');
+        Route::get('/system-status', [TestAlertController::class, 'getSystemStatus'])->name('admin.test-alerts.system-status');
+        
+        // Security Event Triggers
+        Route::post('/security/failed-login', [TestAlertController::class, 'triggerSecurityFailedLogin'])->name('admin.test-alerts.security.failed-login');
+        Route::post('/security/access-violation', [TestAlertController::class, 'triggerSecurityAccessViolation'])->name('admin.test-alerts.security.access-violation');
+        
+        // System Event Triggers
+        Route::post('/system/database-failure', [TestAlertController::class, 'triggerSystemDatabaseFailure'])->name('admin.test-alerts.system.database-failure');
+        
+        // Business Event Triggers
+        Route::post('/business/high-value-sale', [TestAlertController::class, 'triggerBusinessHighValueSale'])->name('admin.test-alerts.business.high-value-sale');
+        
+        // User Action Event Triggers
+        Route::post('/user/account-deleted', [TestAlertController::class, 'triggerUserAccountDeleted'])->name('admin.test-alerts.user.account-deleted');
+        
+        // Email Testing
+        Route::post('/send-test-email', [TestAlertController::class, 'sendTestEmail'])->name('admin.test-alerts.send-email');
+    });
 });
 
 // Manager Routes (Manager and Admin)
@@ -183,4 +206,14 @@ Route::middleware(['auth', 'verified', 'va'])->prefix('va')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('va.dashboard');
 });
 
+// WebSocket Test Route
+Route::middleware(['auth', 'verified'])->get('/test-websocket', function () {
+    return Inertia::render('TestWebSocket');
+})->name('test.websocket');
+
 require __DIR__ . '/auth.php';
+
+// Include test routes (for development only)
+if (app()->environment('local')) {
+    require __DIR__ . '/test.php';
+}

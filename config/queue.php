@@ -7,9 +7,9 @@ return [
     | Default Queue Connection Name
     |--------------------------------------------------------------------------
     |
-    | Laravel's queue supports a variety of backends via a single, unified
-    | API, giving you convenient access to each backend using identical
-    | syntax for each. The default queue connection is defined below.
+    | Laravel's queue API supports an assortment of back-ends via a single
+    | API, giving you convenient access to each back-end using the same
+    | syntax for each one. Here you may define a default connection.
     |
     */
 
@@ -20,9 +20,9 @@ return [
     | Queue Connections
     |--------------------------------------------------------------------------
     |
-    | Here you may configure the connection options for every queue backend
-    | used by your application. An example configuration is provided for
-    | each backend supported by Laravel. You're also free to add more.
+    | Here you may configure the connection information for each server that
+    | is used by your application. A default configuration has been added
+    | for each back-end shipped with Laravel. You are free to add more.
     |
     | Drivers: "sync", "database", "beanstalkd", "sqs", "redis", "null"
     |
@@ -36,10 +36,9 @@ return [
 
         'database' => [
             'driver' => 'database',
-            'connection' => env('DB_QUEUE_CONNECTION'),
-            'table' => env('DB_QUEUE_TABLE', 'jobs'),
-            'queue' => env('DB_QUEUE', 'default'),
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            'table' => 'jobs',
+            'queue' => env('QUEUE_FAILED_NAME', 'default'),
+            'retry_after' => 90,
             'after_commit' => false,
         ],
 
@@ -47,7 +46,7 @@ return [
             'driver' => 'beanstalkd',
             'host' => env('BEANSTALKD_QUEUE_HOST', 'localhost'),
             'queue' => env('BEANSTALKD_QUEUE', 'default'),
-            'retry_after' => (int) env('BEANSTALKD_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => 90,
             'block_for' => 0,
             'after_commit' => false,
         ],
@@ -65,29 +64,54 @@ return [
 
         'redis' => [
             'driver' => 'redis',
-            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'connection' => 'default',
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => 90,
             'block_for' => null,
             'after_commit' => false,
         ],
 
-    ],
+        // Specialized queues for administrative alerts
+        'security-alerts' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'security-alerts',
+            'retry_after' => 60,
+            'after_commit' => false,
+        ],
+        
+        'security-high-alerts' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'security-high-alerts',
+            'retry_after' => 30,
+            'after_commit' => false,
+        ],
+        
+        'system-alerts' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'system-alerts',
+            'retry_after' => 90,
+            'after_commit' => false,
+        ],
+        
+        'business-alerts' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'business-alerts',
+            'retry_after' => 90,
+            'after_commit' => false,
+        ],
+        
+        'monitoring' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'monitoring',
+            'retry_after' => 120,
+            'after_commit' => false,
+        ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Job Batching
-    |--------------------------------------------------------------------------
-    |
-    | The following options configure the database and table that store job
-    | batching information. These options can be updated to any database
-    | connection and table which has been defined by your application.
-    |
-    */
-
-    'batching' => [
-        'database' => env('DB_CONNECTION', 'sqlite'),
-        'table' => 'job_batches',
     ],
 
     /*
@@ -96,16 +120,14 @@ return [
     |--------------------------------------------------------------------------
     |
     | These options configure the behavior of failed queue job logging so you
-    | can control how and where failed jobs are stored. Laravel ships with
-    | support for storing failed jobs in a simple file or in a database.
-    |
-    | Supported drivers: "database-uuids", "dynamodb", "file", "null"
+    | can control which database and table are used to store the jobs that
+    | have failed. You may change them to any database / table you wish.
     |
     */
 
     'failed' => [
-        'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
-        'database' => env('DB_CONNECTION', 'sqlite'),
+        'driver' => env('QUEUE_FAILED_DRIVER', 'database'),
+        'database' => env('DB_CONNECTION', 'mysql'),
         'table' => 'failed_jobs',
     ],
 

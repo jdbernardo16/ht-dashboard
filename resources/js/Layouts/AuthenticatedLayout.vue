@@ -1,8 +1,8 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { Link, usePage } from "@inertiajs/vue3";
 import Sidebar from "@/Components/Sidebar.vue";
 import NotificationBell from "@/Components/UI/NotificationBell.vue";
+import { Link, usePage } from "@inertiajs/vue3";
+import { onMounted, onUnmounted, ref } from "vue";
 
 const page = usePage();
 const showingNavigationDropdown = ref(false);
@@ -163,7 +163,7 @@ onUnmounted(() => {
                         <div class="flex items-center space-x-4">
                             <!-- Notification Bell -->
                             <div class="relative" id="notification-button">
-                                <NotificationBell />
+                                <NotificationBell :user="$page.props.auth.user" />
                             </div>
 
                             <!-- User Dropdown -->

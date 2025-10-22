@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\TaskMedia;
+use App\Traits\AdministrativeAlertsTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -12,6 +13,7 @@ use Inertia\Inertia;
 
 class TaskController extends Controller
 {
+    use AdministrativeAlertsTrait;
     /**
      * Display a listing of the tasks.
      */
@@ -293,6 +295,12 @@ class TaskController extends Controller
         }
 
         $oldStatus = $task->status;
+        
+        // Ensure completed_at is set if status is being changed to 'completed'
+        if ($oldStatus !== 'completed' && isset($validated['status']) && $validated['status'] === 'completed') {
+            $validated['completed_at'] = now();
+        }
+        
         $task->update($validated);
 
         // Handle file uploads if any
@@ -320,7 +328,40 @@ class TaskController extends Controller
     {
         Gate::authorize('delete', $task);
 
+        // Store task info before deletion for alert
+        $taskInfo = [
+            'id' => $task->id,
+            'title' => $task->title,
+            'priority' => $task->priority,
+            'status' => $task->status,
+            'assigned_to' => $task->assigned_to,
+            'due_date' => $task->due_date,
+            'media_count' => $task->media->count(),
+        ];
+
         $task->delete();
+
+        // Trigger bulk operation alert for significant tasks
+        $isSignificant = in_array($task->priority, ['high', 'urgent']) ||
+                        $task->status === 'in_progress' ||
+                        $taskInfo['media_count'] > 0;
+
+        if ($isSignificant) {
+            $this->triggerBulkOperationAlert(
+                'task',
+                1,
+                'delete',
+                [
+                    'task_title' => $task->title,
+                    'priority' => $task->priority,
+                    'status' => $task->status,
+                    'assigned_to' => $task->assigned_to ? $task->assignedTo->name : null,
+                    'due_date' => $task->due_date?->format('Y-m-d'),
+                    'media_count' => $taskInfo['media_count'],
+                    'was_in_progress' => $task->status === 'in_progress',
+                ]
+            );
+        }
 
         return redirect()->route('tasks.index')->with('success', 'Task deleted successfully');
     }

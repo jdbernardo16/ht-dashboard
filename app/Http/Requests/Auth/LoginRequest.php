@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Traits\AdministrativeAlertsTrait;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
+    use AdministrativeAlertsTrait;
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -42,6 +44,25 @@ class LoginRequest extends FormRequest
         $this->ensureIsNotRateLimited();
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+            // Get the current attempt count
+            $attempts = RateLimiter::attempts($this->throttleKey()) + 1;
+            
+            // Determine if this is suspicious (multiple failed attempts)
+            $isSuspicious = $attempts >= 5;
+            
+            // Get location data (simplified - in production you might use a geolocation service)
+            $location = $this->getLocationData();
+            
+            // Trigger the failed login alert
+            $this->triggerFailedLoginAlert(
+                $this->input('email'),
+                $this->ip(),
+                $this->userAgent(),
+                $attempts,
+                $isSuspicious,
+                $location
+            );
+
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -81,5 +102,32 @@ class LoginRequest extends FormRequest
     public function throttleKey(): string
     {
         return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+    }
+
+    /**
+     * Get basic location data for the request
+     * In production, you might want to use a proper geolocation service
+     *
+     * @return array|null
+     */
+    protected function getLocationData(): ?array
+    {
+        // This is a simplified version - in production you'd use a service like
+        // MaxMind GeoIP, IP-API, or similar
+        $ip = $this->ip();
+        
+        // Skip for localhost/internal IPs
+        if (in_array($ip, ['127.0.0.1', '::1', 'localhost']) || str_starts_with($ip, '192.168.') || str_starts_with($ip, '10.')) {
+            return null;
+        }
+        
+        // For demonstration, return basic info
+        // In production, you'd make an API call to get real location data
+        return [
+            'ip' => $ip,
+            'city' => 'Unknown',
+            'country' => 'Unknown',
+            'isp' => 'Unknown',
+        ];
     }
 }

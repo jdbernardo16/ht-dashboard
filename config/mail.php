@@ -14,7 +14,20 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'log'),
+    'default' => env('MAIL_MAILER', 'smtp'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Global Mail Configuration
+    |--------------------------------------------------------------------------
+    |
+    | These options configure the global mail behavior for the application.
+    | This includes charset, encoding, and other mail settings.
+    |
+    */
+
+    'charset' => 'utf-8',
+    'encoding' => '8bit',
 
     /*
     |--------------------------------------------------------------------------
@@ -114,5 +127,24 @@ return [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Markdown Mail Settings
+    |--------------------------------------------------------------------------
+    |
+    | These are the settings that control the markdown mailer behavior.
+    | Feel free to customize these settings to your needs.
+    |
+    */
+
+    'markdown' => [
+        'theme' => 'default',
+        
+        'paths' => [
+            resource_path('views/vendor/mail'),
+        ],
+    ],
+
 
 ];

@@ -8,16 +8,19 @@ use App\Http\Requests\StoreContentPostRequest;
 use App\Http\Requests\UpdateContentPostRequest;
 use App\Services\FileStorageService;
 use App\Services\ImageService;
+use App\Traits\AdministrativeAlertsTrait;
 use App\Exceptions\FileUploadException;
 use App\Exceptions\FileStorageException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ContentPostController extends Controller
 {
+    use AdministrativeAlertsTrait;
     protected FileStorageService $fileStorageService;
     protected ImageService $imageService;
 
@@ -83,7 +86,7 @@ class ContentPostController extends Controller
 
         // Get filter data
         $clients = Auth::user()->role !== 'va'
-            ? \App\Models\Client::orderByRaw("CONCAT(first_name, ' ', last_name) ASC")->get()
+            ? $this->getClientsOrderedByName()
             : collect([]);
 
         return inertia('Content/Index', [
@@ -101,7 +104,7 @@ class ContentPostController extends Controller
         Gate::authorize('create', ContentPost::class);
 
         $clients = Auth::user()->role !== 'va'
-            ? \App\Models\Client::orderByRaw("CONCAT(first_name, ' ', last_name) ASC")->get()
+            ? $this->getClientsOrderedByName()
             : collect([]);
             
         $categories = \App\Models\Category::orderBy('name')->get();
@@ -210,7 +213,7 @@ class ContentPostController extends Controller
         }]);
 
         $clients = Auth::user()->role !== 'va'
-            ? \App\Models\Client::orderByRaw("CONCAT(first_name, ' ', last_name) ASC")->get()
+            ? $this->getClientsOrderedByName()
             : collect([]);
             
         $categories = \App\Models\Category::orderBy('name')->get();
@@ -316,6 +319,17 @@ class ContentPostController extends Controller
         Gate::authorize('delete', $content_post);
 
         try {
+            // Store content info before deletion for alert
+            $contentInfo = [
+                'id' => $content_post->id,
+                'title' => $content_post->title,
+                'content_type' => $content_post->content_type,
+                'status' => $content_post->status,
+                'client_id' => $content_post->client_id,
+                'created_at' => $content_post->created_at,
+                'media_count' => $content_post->media->count(),
+            ];
+
             // Clean up associated images
             if ($content_post->image) {
                 $this->imageService->deleteImage($content_post->image);
@@ -330,6 +344,21 @@ class ContentPostController extends Controller
             $content_post->delete();
 
             Log::info('ContentPost deleted successfully', ['id' => $content_post->id]);
+
+            // Trigger mass content deletion alert if this was a significant content
+            $isSignificant = $content_post->status === 'published' ||
+                            $content_post->media_count > 0 ||
+                            !empty($content_post->content_url);
+
+            if ($isSignificant) {
+                $this->triggerMassContentDeletionAlert(1, [
+                    'content_type' => $content_post->content_type,
+                    'content_title' => $content_post->title,
+                    'status' => $content_post->status,
+                    'media_count' => $contentInfo['media_count'],
+                    'was_published' => $content_post->status === 'published',
+                ]);
+            }
 
             return redirect()
                 ->route('content.web.index')
@@ -481,5 +510,21 @@ class ContentPostController extends Controller
             'scheduled_posts' => $scheduledPosts,
             'draft_posts' => $draftPosts,
         ]);
+    }
+
+    /**
+     * Get clients ordered by full name in a database-agnostic way
+     */
+    protected function getClientsOrderedByName()
+    {
+        $driver = DB::getDriverName();
+        
+        if ($driver === 'sqlite') {
+            // SQLite uses || for concatenation
+            return \App\Models\Client::orderByRaw("first_name || ' ' || last_name ASC")->get();
+        } else {
+            // MySQL and most other databases use CONCAT()
+            return \App\Models\Client::orderByRaw("CONCAT(first_name, ' ', last_name) ASC")->get();
+        }
     }
 }

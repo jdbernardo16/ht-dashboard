@@ -4,7 +4,9 @@
     "type": "module",
     "scripts": {
         "build": "vite build && vite build --ssr",
-        "dev": "vite"
+        "dev": "vite",
+        "reverb": "php artisan reverb:start",
+        "dev-all": "concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74,#94a3b8\" \"php artisan serve\" \"php artisan reverb:start\" \"npm run dev\" --names=server,reverb,vite"
     },
     "devDependencies": {
         "@inertiajs/vue3": "^2.0.0",
@@ -14,8 +16,10 @@
         "@vue/server-renderer": "^3.4.0",
         "autoprefixer": "^10.4.12",
         "concurrently": "^9.0.1",
+        "laravel-echo": "^2.2.4",
         "laravel-vite-plugin": "^2.0.0",
         "postcss": "^8.4.31",
+        "pusher-js": "^8.4.0",
         "tailwindcss": "^3.2.1",
         "vite": "^7.0.0",
         "vue": "^3.4.0"

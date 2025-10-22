@@ -2,6 +2,7 @@
 
 namespace App\Exceptions;
 
+use App\Traits\AdministrativeAlertsTrait;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -10,12 +11,15 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\ConnectionException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
 {
+    use AdministrativeAlertsTrait;
     /**
      * A list of exception types with their corresponding custom log levels.
      *
@@ -58,6 +62,37 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             if (app()->bound('sentry')) {
                 app('sentry')->captureException($e);
+            }
+            
+            // Trigger database failure alerts for database exceptions
+            if ($e instanceof QueryException || $e instanceof ConnectionException) {
+                try {
+                    $query = 'Unknown';
+                    if (method_exists($e, 'getSql')) {
+                        $query = $e->getSql();
+                    } elseif (isset($e->sql)) {
+                        $query = $e->sql;
+                    }
+                    
+                    $this->triggerDatabaseFailureAlert(
+                        $query,
+                        $e->getMessage(),
+                        [
+                            'exception_class' => get_class($e),
+                            'bindings' => method_exists($e, 'getBindings') ? $e->getBindings() : [],
+                            'connection' => $e->getConnectionName() ?? 'default',
+                            'request_path' => request()->path(),
+                            'request_method' => request()->method(),
+                            'user_id' => auth()->id(),
+                        ]
+                    );
+                } catch (\Exception $alertException) {
+                    // Don't let alert failures break the error handling
+                    \Log::error('Failed to trigger database failure alert', [
+                        'original_error' => $e->getMessage(),
+                        'alert_error' => $alertException->getMessage(),
+                    ]);
+                }
             }
         });
     }
